@@ -1,4 +1,4 @@
-on the zone_setup_projet
+dans zone_setup_projet
 
-execute this : chmod +x script.sh
-and after this : ./script.sh
+copie colle : chmod +x script.sh
+et après execute : ./script.sh

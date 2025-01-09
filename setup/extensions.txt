@@ -8,4 +8,3 @@ ms-vscode.remote-explorer
 tabnine.tabnine-vscode
 hnw.vscode-auto-open-markdown-preview
 eamodio.gitlens
-ms-vscode.powershell
