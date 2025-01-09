@@ -360,12 +360,12 @@ source CONVACIEL_ENV/bin/activate
 
 <h2>Backup automation</h2>
 
-> [!NOTE]
-> also the atomation works
+> [!TIP]
+> L'automatisation de la backup du code source fonctionne
 
-The script is here : [git_backup.py](./backup_automate/git_backup.py)
+Le script est la : [git_backup.py](./backup_automate/git_backup.py)
 
 <h1>README.md</h1>
 
->[!NOTE]
+>[!IMPORTANT]
 >README.md fait par TMCooper
