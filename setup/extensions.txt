@@ -1,0 +1,11 @@
+ms-python.python
+donjayamanne.githistory
+ms-python.debugpy
+ms-python.vscode-pylance
+ms-vscode-remote.remote-ssh
+ms-vscode-remote.remote-ssh-edit
+ms-vscode.remote-explorer
+tabnine.tabnine-vscode
+hnw.vscode-auto-open-markdown-preview
+eamodio.gitlens
+ms-vscode.powershell
