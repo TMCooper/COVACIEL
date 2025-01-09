@@ -356,7 +356,7 @@ source CONVACIEL_ENV/bin/activate
 ~~~
 
 > [!NOTE]
-> Avoir un environement qui ne change pas limite les problèmes de copatibilité sur la machine pendant les developpements
+> Avoir un environement qui ne change pas limite les problèmes de copatibilité sur la machine pendant les developpements les dependances contenue dans le requirements devrons donc être installer dedans
 
 <h2>Backup automation</h2>
 
