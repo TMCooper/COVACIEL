@@ -9,7 +9,7 @@
 <div align="center">
   <picture>
     <source align="top" media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.herokuapp.com/?font=Fira+Code&pause=1000&color=00FFFF&multiline=true&random=false&width=435&center=true&lines=Main">
-    <img align="top" src="https://readme-typing-svg.herokuapp.com/?font=Fira+Code&pause=1000&color=00FFFF&multiline=true&random=false&width=435&center=true&lines=Main+TMCooper" alt="Typing SVG" />
+    <img align="top" src="https://readme-typing-svg.herokuapp.com/?font=Fira+Code&pause=1000&color=00FFFF&multiline=true&random=false&width=435&center=true&lines=Main" alt="Typing SVG" />
   </picture>
 </div>
 
