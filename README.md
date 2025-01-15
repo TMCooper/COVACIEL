@@ -138,8 +138,8 @@ Dans le cas de Ubuntu il y a juste besoins de rendre le .sh executable dans [rea
 
 <h2 id="install_gh">Install gh</h2>
 
-> [!IMPORTANT]
-> Veiller a bien installer gh sous peine de ne pas pouvoir télécharger le repo
+>[!IMPORTANT]
+>Veiller a bien installer gh sous peine de ne pas pouvoir télécharger le repo
 
 __Install :__
 ~~~bash
