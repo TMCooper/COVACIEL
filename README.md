@@ -252,12 +252,12 @@ choco install lazygit
 
 <h2 id="clone_for_one">Git clone Branch</h2>
 
-__Tiph branch__
+__Tiph__
 ~~~bash
 git clone -b tiph --single-branch https://github.com/TMCooper/Devel.git
 ~~~
 
-__Nathan Venkatesan branch__
+__Nathan Venkatesan__
 ~~~bash
 git clone -b Nathan_venkatesan --single-branch https://github.com/TMCooper/Devel.git
 ~~~
