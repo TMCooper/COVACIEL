@@ -320,7 +320,7 @@ git fetch origin main:main
 <h2 id="clone_all_in_one">Clone avec toute les branch</h2>
 
 ~~~bash
-git clone https://github.com/TMCooper/COVACIEL.git && cd COVACIEL/ && git fetch origin pre-release:pre-release && git fetch origin tiph:tiph && git fetch origin Nathan_venkatesan:Nathan_venkatesan && git fetch origin TMCooper:TMCooper
+git clone https://github.com/TMCooper/COVACIEL.git && cd COVACIEL/ && git fetch origin pre-release:pre-release && git fetch origin tiph:tiph && git fetch origin Nathan_venkatesan:Nathan_venkatesan && git fetch origin TMCooper:TMCooper && git fetch origin NathanD:NathanD
 ~~~
 
 >[!NOTE]
