@@ -307,7 +307,7 @@ git merge pre-merged
 
 ## Récupération de la branch pre-merged et main
 ~~~bash
-git fetch origin pre-merged:pre-merged
+git fetch origin pre-release:pre-release
 ~~~~
 
 ~~~bash
