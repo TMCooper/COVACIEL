@@ -259,7 +259,7 @@ git clone -b tiph --single-branch https://github.com/TMCooper/Devel.git
 
 __Nathan Venkatesan branch__
 ~~~bash
-git clone -b Nathan_Venkatesan --single-branch https://github.com/TMCooper/Devel.git
+git clone -b Nathan_venkatesan --single-branch https://github.com/TMCooper/Devel.git
 ~~~
 
 __Nathan D__
@@ -270,6 +270,7 @@ git clone -b NathanD --single-branch https://github.com/TMCooper/Devel.git
 __TMCooper__
 ~~~bash
 git clone -b TMCooper --single-branch https://github.com/TMCooper/Devel.git
+~~~
 
 __pre-merged branch__
 ~~~bash 
@@ -319,7 +320,7 @@ git fetch origin main:main
 <h2 id="clone_all_in_one">Clone avec toute les branch</h2>
 
 ~~~bash
-git clone https://github.com/TMCooper/COVACIEL.git && cd Devel/ && git fetch origin pre-merged:pre-merged
+git clone https://github.com/TMCooper/COVACIEL.git && cd Devel/ && git fetch origin pre-merged:pre-merged && git fetch origin tiph:tiph && git fetch origin Nathan_venkatesan:Nathan_venkatesan && git fetch origin TMCooper:TMCooper
 ~~~
 
 >[!NOTE]
