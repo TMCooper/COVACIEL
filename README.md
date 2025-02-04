@@ -252,14 +252,34 @@ choco install lazygit
 
 <h2 id="clone_for_one">Git clone Branch</h2>
 
-__pre-merged branch__
+__Tiph__
+~~~bash
+git clone -b tiph --single-branch https://github.com/TMCooper/COVACIEL.git
+~~~
+
+__Nathan Venkatesan__
+~~~bash
+git clone -b Nathan_venkatesan --single-branch https://github.com/TMCooper/COVACIEL.git
+~~~
+
+__Nathan D__
+~~~bash
+git clone -b NathanD --single-branch https://github.com/TMCooper/COVACIEL.git
+~~~
+
+__TMCooper__
+~~~bash
+git clone -b TMCooper --single-branch https://github.com/TMCooper/COVACIEL.git
+~~~
+
+__pre-release__
 ~~~bash 
-git clone -b pre-merged --single-branch https://github.com/TMCooper/Devel.git
+git clone -b pre-release --single-branch https://github.com/TMCooper/COVACIEL.git
 ~~~
 
 __Main branch__
 ~~~bash
-git clone -b main --single-branch https://github.com/TMCooper/Devel.git
+git clone -b main --single-branch https://github.com/TMCooper/COVACIEL.git
 ~~~
 
 <h2 id="merge_method">Merge command</h2>
@@ -287,7 +307,7 @@ git merge pre-merged
 
 ## Récupération de la branch pre-merged et main
 ~~~bash
-git fetch origin pre-merged:pre-merged
+git fetch origin pre-release:pre-release
 ~~~~
 
 ~~~bash
@@ -300,7 +320,7 @@ git fetch origin main:main
 <h2 id="clone_all_in_one">Clone avec toute les branch</h2>
 
 ~~~bash
-git clone https://github.com/TMCooper/COVACIEL.git && cd Devel/ && git fetch origin pre-merged:pre-merged
+git clone https://github.com/TMCooper/COVACIEL.git && cd COVACIEL/ && git fetch origin pre-release:pre-release && git fetch origin tiph:tiph && git fetch origin Nathan_venkatesan:Nathan_venkatesan && git fetch origin TMCooper:TMCooper
 ~~~
 
 >[!NOTE]
