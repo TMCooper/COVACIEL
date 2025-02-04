@@ -272,9 +272,9 @@ __TMCooper__
 git clone -b TMCooper --single-branch https://github.com/TMCooper/COVACIEL.git
 ~~~
 
-__pre-merged branch__
+__pre-release branch__
 ~~~bash 
-git clone -b pre-merged --single-branch https://github.com/TMCooper/COVACIEL.git
+git clone -b pre-release --single-branch https://github.com/TMCooper/COVACIEL.git
 ~~~
 
 __Main branch__
