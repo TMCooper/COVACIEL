@@ -252,21 +252,6 @@ choco install lazygit
 
 <h2 id="clone_for_one">Git clone Branch</h2>
 
-__Tiph__
-~~~bash
-git clone -b tiph --single-branch https://github.com/TMCooper/COVACIEL.git
-~~~
-
-__Nathan Venkatesan__
-~~~bash
-git clone -b Nathan_venkatesan --single-branch https://github.com/TMCooper/COVACIEL.git
-~~~
-
-__Nathan D__
-~~~bash
-git clone -b NathanD --single-branch https://github.com/TMCooper/COVACIEL.git
-~~~
-
 __TMCooper__
 ~~~bash
 git clone -b TMCooper --single-branch https://github.com/TMCooper/COVACIEL.git
@@ -320,7 +305,7 @@ git fetch origin main:main
 <h2 id="clone_all_in_one">Clone avec toute les branch</h2>
 
 ~~~bash
-git clone https://github.com/TMCooper/COVACIEL.git && cd COVACIEL/ && git fetch origin pre-release:pre-release && git fetch origin tiph:tiph && git fetch origin Nathan_venkatesan:Nathan_venkatesan && git fetch origin TMCooper:TMCooper && git fetch origin NathanD:NathanD
+git clone https://github.com/TMCooper/COVACIEL.git && cd COVACIEL/ && git fetch origin pre-release:pre-release && git fetch origin TMCooper:TMCooper
 ~~~
 
 >[!NOTE]
