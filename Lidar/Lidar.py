@@ -1,6 +1,7 @@
 import serial
 import struct
 import math
+from time import sleep
 
 class LidarLD06:
     def __init__(self, port, baudrate=230400):
@@ -64,6 +65,7 @@ class LidarLD06:
                 data = self.parse_frame(frame)
                 closest_distance, closest_angle = self.find_closest_object(data)
                 print(f"Objet le plus proche : Distance = {closest_distance / 1000.0:.2f} m, Angle = {closest_angle:.2f}°")
+                sleep(0.5)
         except KeyboardInterrupt:
             print("Arrêt du programme.")
         finally:
@@ -71,7 +73,7 @@ class LidarLD06:
 
 if __name__ == '__main__':
     # Remplacez '/dev/ttyUSB0' par le port série approprié
-    lidar = LidarLD06(port='/dev/ttyUSB0')
+    lidar = LidarLD06(port='/dev/ttyS0')
     lidar.run()
 
 
