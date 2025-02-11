@@ -43,3 +43,4 @@ def process_data(frame):
 
 if __name__ == "__main__":
     read_lidar_data()
+
