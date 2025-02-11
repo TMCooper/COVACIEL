@@ -345,19 +345,19 @@ git push origin main
 
 > [!TIP]
 > Création d'un env python : 
-> sous Ubuntu : python3 -m venv CONVACIEL_ENV
-> sous Windows : python -m venv CONVACIEL_ENV
+> sous Ubuntu : python3 -m venv COVACIEL
+> sous Windows : python -m venv COVACIEL
 
 Activate l'env python
 
 __Windows__
 ~~~bash
-.\CONVACIEL_ENV\Scripts\activate
+.\COVACIEL\Scripts\activate
 ~~~
 
 __Linux__
 ~~~bash
-source CONVACIEL_ENV/bin/activate
+source COVACIEL/bin/activate
 ~~~
 
 > [!NOTE]
