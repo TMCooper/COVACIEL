@@ -1,17 +1,23 @@
-class Pilote:
+
+class Pilote():
     speed = float
     direction = float
 
-    def __init__(self, speed, direction): #Ajout de speed et direction au "tableau" de self
+    branch_moteur = 27 #Branche moteur
+    branch_direction = 28 #Branche pour la direction
+
+    def __init__(self, speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
         self.speed = speed
         self.direction = direction
+        self.branch_moteur = branch_moteur
+        self.branch_direction = branch_direction
 
-    def adjustSpeed(self):
+    def adjustSpeed(self, branch_moteur):
         self.speed = 1.2 #ajuste la valeur de la vitesses
         print(f"Ajustement de speed a : {self.speed}") #print la vitesse après actualisation
         return self.speed #retourne la nouvelle valeur de vitesse 
 
-    def changeDirection(self):
+    def changeDirection(self, branch_direction):
         self.direction = 2.1 #ajuste la direction
         print(f"Ajustement de direction a : {self.direction}") #print la direction après ajustement
         return self.direction #retourne la direction actualiser
