@@ -1,3 +1,4 @@
+import time
 
 class Pilote():
     speed = float
@@ -18,7 +19,7 @@ class Pilote():
         self.speed = Pilote.verificationEntrer() #Ajuste la valeur de la vitesses entre -1.0 et 1.0
         rapportCyclique = Pilote.calculerRapportCyclique(self.speed)
         signalPWM = Pilote.genererSignalPWM(self.branch_moteur, rapportCyclique)
-        print(f"Ajustement de speed a : {self.speed} \n Signal PWM = {signalPWM}") #print la vitesse après actualisation
+        print(f"Ajustement de speed a : {self.speed} \n Signal PWM = {signalPWM}\n Rapport cyclique : {rapportCyclique}%") #print la vitesse après actualisation
         
         return signalPWM #retourne la nouvelle valeur de vitesse 
 
