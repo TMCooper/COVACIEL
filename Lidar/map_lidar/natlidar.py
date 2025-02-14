@@ -44,7 +44,7 @@ def process_data(frame):
         ax.set_theta_zero_location('N')  # 0° en haut
         ax.set_theta_direction(-1)  # Sens antihoraire
 
-        # Afficher les points dans le repère polaire
+        # Affichage des points autour de 360°
         ax.scatter(angles, distances, color='red', s=50)  # Points en rouge, taille ajustée (s=50)
         ax.set_title("LiDAR Détection en Temps Réel")
         plt.pause(0.1)  # Mise à jour de l'affichage
