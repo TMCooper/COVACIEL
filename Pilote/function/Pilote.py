@@ -1,6 +1,6 @@
 class Pilote:
-    speed = 0.0
-    direction = 0.0
+    speed = float
+    direction = float
 
     def __init__(self, speed, direction): #Ajout de speed et direction au "tableau" de self
         self.speed = speed
@@ -16,9 +16,13 @@ class Pilote:
         print(f"Ajustement de direction a : {self.direction}") #print la direction après ajustement
         return self.direction #retourne la direction actualiser
     
-    def applyBrakes(self):
-        print("Déclanchement des frein") #affiche le bon déclanchement des frein
-        return True #True pour oui le frein est déclancher
+    def applyBrakes(self, entrer):
+        if entrer == True:
+            print("Déclanchement des frein") #affiche le bon déclanchement des frein
+            return True #True pour oui le frein est déclancher
+        elif entrer == False:
+            print("Frein non enclanché") #affiche le non déclanchement des frein
+            return False
     
     def getCurrentSpeed(self):
         print(f"Valeur actuelle de speed : {self.speed}") #affiche directement la valeur de speed
