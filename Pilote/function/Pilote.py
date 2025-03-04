@@ -7,6 +7,13 @@ class Pilote():
     branch_moteur = int #Branche moteur 27
     branch_direction = int #Branche pour la direction 28
 
+    periode = 20000 # Periode de 50 ms en microsecondes
+
+    # start_time = time.time()
+
+    # def micros():
+        # return int((time.time() - Pilote.start_time) * 1_000_000)
+
     def __init__(self, speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
         self.speed = speed
         self.direction = direction
@@ -17,8 +24,8 @@ class Pilote():
         #faire un system de com entre le raspi et le resultat de notre decision
         
         self.speed = Pilote.verificationEntrer() #Ajuste la valeur de la vitesses entre -1.0 et 1.0
-        rapportCyclique = Pilote.calculerRapportCyclique(self.speed)
-        signalPWM = Pilote.genererSignalPWM(self.branch_moteur, rapportCyclique)
+        rapportCyclique = Pilote.calculerRapportCyclique(self)
+        signalPWM = Pilote.genererSignalPWM(self, rapportCyclique)
         print(f"Ajustement de speed a : {self.speed} \n Signal PWM = {signalPWM}\n Rapport cyclique : {rapportCyclique}%") #print la vitesse après actualisation
         
         return signalPWM #retourne la nouvelle valeur de vitesse 
@@ -55,10 +62,11 @@ class Pilote():
                 new_speed = float(new_speed) # Convertie la valeur choisit en float pour la conparaison
             return new_speed
 
-    def calculerRapportCyclique(speed):
-        if speed == 0:
+    def calculerRapportCyclique(self):
+        speed = self.speed
+        if speed == 0.0:
             dureeEtatHaut = 1.5
-        elif speed > 0:
+        elif speed > 0.0:
             dureeEtatHaut = 1.5 + speed * (2.0 - 1.5) # Interpolation vers 2 ms
         else:
             dureeEtatHaut = 1.5 + speed * (1.3 - 1.5) # Interpolation vers 1.3 ms
@@ -67,5 +75,17 @@ class Pilote():
 
     def genererSignalPWM(branch_moteur, rapportCyclique):
         #avoir une periode de 50 ms
+        # print(Pilote.micros())
+        debutCycle = time.time()
+        dureeEtatHaut = ((rapportCyclique / 100.0) * Pilote.periode)
+        actuel = time.time()
+
+        if (actuel - debutCycle < dureeEtatHaut):
+            PWM = 1
+        else:
+            PWM = 0
         
-        return 0
+        if (actuel - debutCycle >= Pilote.periode):
+            debutCycle = actuel
+        
+        return PWM

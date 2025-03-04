@@ -20,6 +20,7 @@ def main():
         pilote.getCurrentSpeed()
         
         pilote.applyBrakes(entrer)
+
     except KeyboardInterrupt:
         print("\nArret du programme...\n")
 
