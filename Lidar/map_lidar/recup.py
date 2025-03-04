@@ -23,8 +23,9 @@ def read_lidar_data():
             while True:
                 if ser.read(1) == b'\x54':  # Attendre le début de la trame
                     frame = ser.read(46)   # Lire la trame complète
+                    
                     if len(frame) == 46:
-                        process_data(frame)
+                        process_data(frame)  # On passe bien 'frame' à la fonction
                         plt.pause(0.1)  # Rafraîchissement du graphique
     except Exception as e:
         print(f"Erreur : {e}")
@@ -48,11 +49,18 @@ def process_data(frame):
     # Extraction des distances et mise à jour du dictionnaire
     for i in range(12):
         idx = 5 + (i * 3)
+
+        # Vérifier que l'index est valide avant d'accéder aux données
+        if idx + 1 >= len(frame):
+            print(f"Index hors limites : {idx} (longueur de frame : {len(frame)})")
+            return  # On ignore cette trame
+
         dist_low = frame[idx]
         dist_high = frame[idx + 1]
         distance = ((dist_high << 8) | dist_low) / 1000.0  # Convertir en mètres
 
-        lidar_data[angles[i]] = distance  # Mettre à jour la distance de cet angle
+        if distance >= 0.5:  # Filtrage des distances < 0.5m
+            lidar_data[angles[i]] = distance
 
     # Mise à jour du graphique
     ax.cla()
