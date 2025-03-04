@@ -1,4 +1,5 @@
 import time
+import RPi.GPIO as gpio
 
 class Pilote():
     speed = float
@@ -9,10 +10,6 @@ class Pilote():
 
     periode = 20000 # Periode de 50 ms en microsecondes
 
-    # start_time = time.time()
-
-    # def micros():
-        # return int((time.time() - Pilote.start_time) * 1_000_000)
 
     def __init__(self, speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
         self.speed = speed
@@ -74,16 +71,20 @@ class Pilote():
         return (dureeEtatHaut / 20.0) * 100.0 # Convertion en %
 
     def genererSignalPWM(branch_moteur, rapportCyclique):
-        #avoir une periode de 50 ms
+        # gpio.setup(branch_moteur, gpio.OUT)
         # print(Pilote.micros())
         debutCycle = time.time()
         dureeEtatHaut = ((rapportCyclique / 100.0) * Pilote.periode)
         actuel = time.time()
 
+        # Gpio peut être a ecrire ailleur 
+
         if (actuel - debutCycle < dureeEtatHaut):
             PWM = 1
+            gpio.output(branch_moteur, gpio.HIGH)
         else:
             PWM = 0
+            gpio.output(branch_moteur, gpio.LOW)
         
         if (actuel - debutCycle >= Pilote.periode):
             debutCycle = actuel
