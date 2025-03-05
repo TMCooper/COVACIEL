@@ -41,12 +41,9 @@ while True:
 
     if(i % 40 == 39):
         if('line' in locals()):
-            line.remove()
-        line = ax.scatter(angles, distances, c="cyan", s=5)
-        if 'line' in locals():
-    line.set_offsets(list(zip(angles, distances)))  # Met à jour sans recréer l'objet
-else:
-    line = ax.scatter(angles, distances, c="cyan", s=5)
+            line.set_offsets(list(zip(angles, distances)))  # Met à jour sans recréer l'objet
+        else:
+            line = ax.scatter(angles, distances, c="cyan", s=5)
 
 
         ax.set_theta_offset(math.pi / 2)

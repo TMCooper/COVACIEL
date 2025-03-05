@@ -28,10 +28,8 @@ def CalcLidarData(str):
     Angle_i = list()
     Distance_i = list()
     count = 0
-    if(LSA-FSA > 0):
-        angleStep = float(LSA-FSA)/(12)
-    else:
-        angleStep = float((LSA+360)-FSA)/(12)
+    angleStep = (LSA - FSA) % 360 / 12  # Opération plus rapide
+
     
     counter = 0
     circle = lambda deg : deg - 360 if deg >= 360 else deg
