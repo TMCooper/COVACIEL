@@ -10,6 +10,9 @@ class Pilote():
 
     periode = 20000 # Periode de 50 ms en microsecondes
 
+    gpio.setup(branch_direction, gpio.OUT) #Configuration de la branche moteur en sortie
+    servoDirection = gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
+    servoDirection(0) #Arret du PWM
 
     def __init__(self, speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
         self.speed = speed
@@ -28,7 +31,9 @@ class Pilote():
         return signalPWM #retourne la nouvelle valeur de vitesse 
 
     def changeDirection(self):
-        self.direction = 2.1 #ajuste la direction
+        self.direction = Pilote.verificationEntrer() #ajuste la direction
+        angleServo = map(self.direction * 100, -100, 100, 0, 180) #converti la direction entre -1.0 et 1.0 en angle
+        Pilote.servoDirection.ChangeDutyCycle(angleServo) #ecriture de l'angle sur le servo moteur
         print(f"Ajustement de direction a : {self.direction}") #print la direction après ajustement
         return self.direction #retourne la direction actualiser
     
