@@ -85,11 +85,14 @@
   </h1>
 </div>
 
-- [x] Incomplete Quest
-  - [x] Comprendre le cahier des charges
+- [ ] Incomplete Quest
+  - [ ] Création des bases de la class CarControler
+  - [ ] Création des bases de la class Camera
+  - [ ] Création des bases de la class Lidar
  
-- [ ] Completed Quest
-  - [ ] Aucune
+- [x] Completed Quest
+  - [x] Comprendre le cahier des charges
+  - [x] Creation de la Classe Pilote
 
 > [!WARNING]
 > Vous êtes sur le README.md main.
