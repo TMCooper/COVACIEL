@@ -56,7 +56,7 @@ class Pilote():
         else: 
             while new_speed > 1.0 or new_speed < -1.0: # Si la valeur n'est pas bonne nous rentrons dans un while et t'en que la variable new_speed n'est pas entre -1.0 et 1.0 alors on demande a l'utilisateur de nouveau
                 new_speed = input("Erreur : La consigne doit être entre -1.0 et 1.0 : ") #redemande a l'utilisateur la valeur qu'il souhaite
-                new_speed = float(new_speed) # Convertie la valeur choisit en float pour la conparaison
+                new_speed = float(new_speed) # Convertie la valeur choisit en float pour la comparaison
             return new_speed
 
     def calculerRapportCyclique(self):
