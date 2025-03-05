@@ -22,7 +22,7 @@ ax.yaxis.grid(True,color='blue',linestyle='dashed')
 # Eキーを押すと終了します。
 plt.connect('key_press_event', lambda event: exit(1) if event.key == 'e' else None)
 
-ser = serial.Serial(port='/dev/ttyUSB0',
+ser = serial.Serial(port='/dev/ttyS0',
                     baudrate=230400,
                     timeout=5.0,
                     bytesize=8,
@@ -43,6 +43,11 @@ while True:
         if('line' in locals()):
             line.remove()
         line = ax.scatter(angles, distances, c="cyan", s=5)
+        if 'line' in locals():
+    line.set_offsets(list(zip(angles, distances)))  # Met à jour sans recréer l'objet
+else:
+    line = ax.scatter(angles, distances, c="cyan", s=5)
+
 
         ax.set_theta_offset(math.pi / 2)
         plt.pause(0.01)
