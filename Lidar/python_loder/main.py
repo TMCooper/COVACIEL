@@ -19,7 +19,6 @@ ax.xaxis.grid(True,color='blue',linestyle='dashed')
 ax.yaxis.grid(True,color='blue',linestyle='dashed')
 
 
-# Eキーを押すと終了します。
 plt.connect('key_press_event', lambda event: exit(1) if event.key == 'e' else None)
 
 ser = serial.Serial(port='/dev/ttyS0',
