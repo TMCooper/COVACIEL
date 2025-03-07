@@ -2,15 +2,25 @@ import cv2
 import numpy as np
 
 # Ouvrir la caméra
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # Forcer l'utilisation de V4L2 pour la capture
+
+# Vérifier si la caméra s'est bien ouverte
+if not cap.isOpened():
+    print("Erreur: impossible d'ouvrir la caméra")
+    exit()
+
+
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
+    blurred_frame = cv2.GaussianBlur(frame, (15, 15), 0)  
+    # Appliquer un flou avec un noyau de taille (15, 15)
+
     # Convertir l'image en HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(blurred_frame, cv2.COLOR_BGR2HSV)
 
     # Définir les plages de couleurs pour le rouge
     lower_red1 = np.array([0, 120, 70])
