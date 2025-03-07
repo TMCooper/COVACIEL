@@ -1,11 +1,12 @@
 COVACIEL
 .cam_vid_test.py.swp
 .plotlidar.py.swp
-test.jpg
 __init__.cpython-311.pyc
 Pilote.cpython-311.pyc
 pilote.cpython-311.pyc
 test.h264
-test.mp4
 .lgd-nfy0
 __pycache__
+lidar_results.txt
+*.jpg
+*.mp4
