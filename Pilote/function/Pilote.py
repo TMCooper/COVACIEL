@@ -5,27 +5,32 @@ class Pilote():
     speed = float
     direction = float
 
-    branch_moteur = int #Branche moteur 27
-    branch_direction = int #Branche pour la direction 28
+    branch_moteur = int #Branche moteur
+    branch_direction = int #Branche pour la direction
 
     periode = 20000 # Periode de 50 ms en microsecondes
 
-    gpio.setup(branch_direction, gpio.OUT) #Configuration de la branche moteur en sortie
-    servoDirection = gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
-    servoDirection(0) #Arret du PWM
-
     def __init__(self, speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
+        # Initialisation des differente variable essentiel 
         self.speed = speed
         self.direction = direction
         self.branch_moteur = branch_moteur
         self.branch_direction = branch_direction
+
+        # Définir le mode de numérotation des broches
+        gpio.setmode(gpio.BOARD)
+
+        # Initialisation des broches GPIO
+        gpio.setup(self.branch_moteur, gpio.OUT) #Configuration de la branche moteur en sortie
+        servoDirection = self.branch_direction #gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
+        # servoDirection(0) #Arret du PWM
 
     def adjustSpeed(self):
         #faire un system de com entre le raspi et le resultat de notre decision
         
         self.speed = Pilote.verificationEntrer() #Ajuste la valeur de la vitesses entre -1.0 et 1.0
         rapportCyclique = Pilote.calculerRapportCyclique(self)
-        signalPWM = Pilote.genererSignalPWM(self, rapportCyclique)
+        signalPWM = Pilote.genererSignalPWM(self.branch_moteur, rapportCyclique)
         print(f"Ajustement de speed a : {self.speed} \n Signal PWM = {signalPWM}\n Rapport cyclique : {rapportCyclique}%") #print la vitesse après actualisation
         
         return signalPWM #retourne la nouvelle valeur de vitesse 
