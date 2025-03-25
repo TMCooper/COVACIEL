@@ -7,7 +7,7 @@ import time
 
 # Paramètres
 periode = 20e-3  # Période de 20ms
-rapport_cyclique = 7.5 / 100  # 7.5% de rapport cyclique
+rapport_cyclique = 8 / 100  # 8% de rapport cyclique
 temps_haut = rapport_cyclique * periode  # Temps en haut (1.5)
 temps_bas = periode - temps_haut  # Temps en bas (0)
 
@@ -23,7 +23,7 @@ for i in range(len(t)):
 # Affichage avec matplotlib
 plt.figure(figsize=(10, 4))
 plt.plot(t * 1000, signal)  # On affiche le temps en ms pour plus de clarté
-plt.title("Signal avec rapport cyclique de 7.5%")
+plt.title("Signal avec rapport cyclique de 8%")
 plt.xlabel("Temps (ms)")
 plt.ylabel("Amplitude")
 plt.grid(True)

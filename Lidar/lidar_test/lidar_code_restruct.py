@@ -5,6 +5,7 @@ from enum import Enum
 import struct
 import time
 import argparse
+import RPi.GPIO as GPIO
 
 # ----------------------------------------------------------------------
 # System Constants
@@ -16,6 +17,9 @@ PLOT_AUTO_RANGE = False
 PLOT_CONFIDENCE = True
 PLOT_CONFIDENCE_COLOUR_MAP = "bwr_r"
 PRINT_DEBUG = False
+
+# Set the GPIO mode
+GPIO.setmode(GPIO.BCM)
 
 # ----------------------------------------------------------------------
 # Main Packet Format
@@ -90,13 +94,16 @@ class PWMController:
     def __init__(self, pin, serial_connection):
         self.pin = pin
         self.serial_connection = serial_connection
+        GPIO.setup(self.pin, GPIO.OUT)  # Ensure the pin is set up as an output
+        self.pwm = GPIO.PWM(self.pin, 1000)  # Initialize PWM on the specified pin
 
     def set_speed(self, duty_cycle):
         """Set the motor speed using PWM duty cycle (0-100%)."""
-        # Convert duty cycle to PWM signal (assuming 8-bit resolution, 0-255)
-        pwm_value = int((duty_cycle / 100.0) * 255)
-        # Send PWM value to the motor control pin
-        self.serial_connection.write(bytes([pwm_value]))
+        self.pwm.start(duty_cycle)
+
+    def stop(self):
+        """Stop the PWM signal."""
+        self.pwm.stop()
 
 class LidarController:
     def __init__(self, port=SERIAL_PORT, pwm_pin=18):
@@ -110,7 +117,7 @@ class LidarController:
 
     def run(self):
         # Set initial motor speed (e.g., 50% duty cycle)
-        self.pwm_controller.set_speed(50)
+        self.pwm_controller.set_speed(70)
 
         while self.running:
             if self.state == State.SYNC0:
@@ -151,5 +158,11 @@ if __name__ == "__main__":
     parser.add_argument('--pwm_pin', type=int, default=18, help='GPIO pin for PWM output (default: 18)')
     args = parser.parse_args()
 
-    controller = LidarController(pwm_pin=args.pwm_pin)
-    controller.run()
+    try:
+        controller = LidarController(pwm_pin=args.pwm_pin)
+        controller.run()
+    except KeyboardInterrupt:
+        print("Program interrupted by user")
+    finally:
+        GPIO.cleanup()
+        print("GPIO cleanup completed")

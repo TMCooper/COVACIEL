@@ -1,36 +1,38 @@
+# code OK !
+
 import RPi.GPIO as GPIO
 import time
 
 # Paramètres
-periode = 20e-3  # Période de 20ms
-rapport_cyclique = 7.5 / 100  # 7.5% de rapport cyclique
-temps_haut = rapport_cyclique * periode  # Temps en haut (1.5)
-temps_bas = periode - temps_haut  # Temps en bas (0)
+periode = 20e-3  # Période de 20 ms
+temps_haut = 1.6e-3  # Début à 1.6 ms (0 m/s)
+# max_temps_haut = 2e-3  # 2 ms = vitesse max
+temps_bas = periode - temps_haut  # Temps à l'état bas
 
-# Broche GPIO à utiliser pour le signal PWM
-broche_pwm = 11  # Exemple de broche GPIO 18 (Vérifie quelle broche tu veux utiliser)
+# Broche GPIO utilisée pour le signal PWM
+broche_pwm = 11  # Vérifie la broche utilisée
 
 # Initialisation de la GPIO
-GPIO.setmode(GPIO.BCM)  # Mode BCM pour utiliser le numéro de broche
-GPIO.setup(broche_pwm, GPIO.OUT)  # Configuration de la broche en sortie
+GPIO.setmode(GPIO.BOARD)  
+GPIO.setup(broche_pwm, GPIO.OUT)
 
-# Création du signal PWM avec une fréquence de 50Hz (1/20ms)
-pwm = GPIO.PWM(broche_pwm, 50)  # Fréquence de 50Hz (période de 20ms)
-pwm.start(0)  # Démarrer le signal PWM avec un rapport cyclique initial de 0%
+pwm = GPIO.PWM(broche_pwm, 50)  # Fréquence 50 Hz (1/20 ms)
+pwm.start((temps_haut / periode) * 100)  # Démarrer avec le bon rapport cyclique
+print((temps_haut/periode) * 100) # 8%
 
 try:
     while True:
-        # Envoie un signal PWM de 7.5% de rapport cyclique
-        pwm.ChangeDutyCycle(7.5)  # 7.5% de rapport cyclique
-        time.sleep(periode)  # Attendre la durée de la période (20ms)
-        
-        # Envoie un signal PWM de 0% de rapport cyclique (signal à l'état bas)
-        pwm.ChangeDutyCycle(0)  # 0% de rapport cyclique
-        time.sleep(temps_bas)  # Attendre le temps restant pour une période complète
-        
+        GPIO.output(broche_pwm, GPIO.HIGH)  # Met la broche à 1 (signal HIGH)
+        time.sleep(temps_haut)  # Maintenir l'état haut pendant 1.6 ms
+
+        GPIO.output(broche_pwm, GPIO.LOW)  # Met la broche à 0 (signal LOW)
+        time.sleep(temps_bas)  # Maintenir l'état bas pendant 18.4 ms
+
+        # print(temps_bas + temps_haut)
+        # print(f"temps haut : {temps_haut} \ntemps bas : {temps_bas} \nperiode : {periode} \npwm : {pwm} \nrapport cyclique : {rapport_cyclique}")
+
 except KeyboardInterrupt:
     print("Arrêt du programme")
 
 finally:
-    pwm.stop()  # Arrêter le PWM
-    GPIO.cleanup()  # Nettoyage de la configuration GPIO
+    GPIO.cleanup()  # Nettoyage GPIO

@@ -1,7 +1,7 @@
 import time
-from camera_module import ColorDetector
-from lidar_module import LidarController
-from pilote_module import Pilote
+from "../testcam/class_array.py" import ColorDetector
+from "../Lidar/lidar_test/lidar_code_bon.py" import LidarController
+from "../Pilote/main.py" import Pilote
 
 class CarController:
     def __init__(self):
