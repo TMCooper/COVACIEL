@@ -1,13 +1,18 @@
-from picamera2 import Picamera2, Preview
-from libcamera import Transform  # Importer Transform pour éviter l'erreur
+from picamera2 import Picamera2
+import numpy as np
 import time
 
-picam2 = Picamera2()
-camera_config = picam2.create_preview_configuration(transform=Transform(hflip=True, vflip=True))  # Rotation à 180°
+try:
+    picam2 = Picamera2()
+    picam2.start()
+    
+    for _ in range(10):  # Effectuer 10 captures
+        frame = picam2.capture_array("main")
+        print("Capture réussie")  # Affichage dans le terminal
+        
+        time.sleep(0.1)  # Attendre 0.1 seconde pour obtenir 10 captures par seconde
+    
+    picam2.stop()
 
-picam2.configure(camera_config)
-picam2.start_preview(Preview.DRM)
-picam2.start()
-
-time.sleep(2)
-picam2.capture_file("test.jpg")  # Capture l'image retournée
+except Exception as e:
+    print(f"Erreur pendant la capture: {e}")

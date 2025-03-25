@@ -8,7 +8,7 @@ temps_haut = rapport_cyclique * periode  # Temps en haut (1.5)
 temps_bas = periode - temps_haut  # Temps en bas (0)
 
 # Broche GPIO à utiliser pour le signal PWM
-broche_pwm = 27  # Exemple de broche GPIO 18 (Vérifie quelle broche tu veux utiliser)
+broche_pwm = 11  # Exemple de broche GPIO 18 (Vérifie quelle broche tu veux utiliser)
 
 # Initialisation de la GPIO
 GPIO.setmode(GPIO.BCM)  # Mode BCM pour utiliser le numéro de broche
