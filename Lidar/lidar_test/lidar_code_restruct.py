@@ -4,6 +4,7 @@ import serial
 from enum import Enum
 import struct
 import time
+import argparse
 
 # ----------------------------------------------------------------------
 # System Constants
@@ -86,7 +87,8 @@ class LidarPlotter:
         return x, y, confidence
 
 class PWMController:
-    def __init__(self, serial_connection):
+    def __init__(self, pin, serial_connection):
+        self.pin = pin
         self.serial_connection = serial_connection
 
     def set_speed(self, duty_cycle):
@@ -97,18 +99,18 @@ class PWMController:
         self.serial_connection.write(bytes([pwm_value]))
 
 class LidarController:
-    def __init__(self, port=SERIAL_PORT):
+    def __init__(self, port=SERIAL_PORT, pwm_pin=18):
         self.lidar_serial = serial.Serial(port, 230400, timeout=0.5)
         self.measurements = []
         self.data = b''
         self.state = State.SYNC0
         self.plotter = LidarPlotter()
-        self.pwm_controller = PWMController(self.lidar_serial)
+        self.pwm_controller = PWMController(pwm_pin, self.lidar_serial)
         self.running = True
 
     def run(self):
         # Set initial motor speed (e.g., 50% duty cycle)
-        self.pwm_controller.set_speed(100)
+        self.pwm_controller.set_speed(50)
 
         while self.running:
             if self.state == State.SYNC0:
@@ -145,5 +147,9 @@ class LidarController:
                 self.measurements = []
 
 if __name__ == "__main__":
-    controller = LidarController()
+    parser = argparse.ArgumentParser(description="Run Lidar Controller with PWM pin selection.")
+    parser.add_argument('--pwm_pin', type=int, default=18, help='GPIO pin for PWM output (default: 18)')
+    args = parser.parse_args()
+
+    controller = LidarController(pwm_pin=args.pwm_pin)
     controller.run()

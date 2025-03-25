@@ -26,7 +26,7 @@ try:
         
         # Envoie un signal PWM de 0% de rapport cyclique (signal à l'état bas)
         pwm.ChangeDutyCycle(0)  # 0% de rapport cyclique
-        time.sleep(temps_bas)  # Attendre le temps restant pour une période complète (92.5% du temps)
+        time.sleep(temps_bas)  # Attendre le temps restant pour une période complète
         
 except KeyboardInterrupt:
     print("Arrêt du programme")
