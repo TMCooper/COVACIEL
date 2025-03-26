@@ -19,7 +19,7 @@ PLOT_CONFIDENCE_COLOUR_MAP = "bwr_r"
 PRINT_DEBUG = False
 
 # Set the GPIO mode
-GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BOARD)
 
 # ----------------------------------------------------------------------
 # Main Packet Format
@@ -35,6 +35,80 @@ class State(Enum):
     LOCKED = 4
     UPDATE_PLOT = 5
 
+# ----------------------------------------------------------------------
+# PWM Controller
+# ----------------------------------------------------------------------
+class PWMController:
+    def __init__(self, pin, pwm_frequency=1000):
+        self.pin = pin
+        GPIO.setup(self.pin, GPIO.OUT)  # Ensure the pin is set up as an output
+        self.pwm = GPIO.PWM(self.pin, pwm_frequency)  # Initialize PWM on the specified pin
+        self.pwm_frequency = pwm_frequency
+
+    def set_speed(self, duty_cycle):
+        """Set the motor speed using PWM duty cycle (0-100%)."""
+        self.pwm.start(duty_cycle)
+
+    def stop(self):
+        """Stop the PWM signal."""
+        self.pwm.stop()
+
+# ----------------------------------------------------------------------
+# Lidar Controller
+# ----------------------------------------------------------------------
+class LidarController:
+    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=1000, duty_cycle=80):
+        self.lidar_serial = serial.Serial(port, 230400, timeout=0.5)
+        self.measurements = []
+        self.data = b''
+        self.state = State.SYNC0
+        self.pwm_controller = PWMController(pwm_pin, pwm_frequency)
+        self.pwm_controller.set_speed(duty_cycle)  # Set initial speed
+        self.running = True
+
+
+    def run(self):
+        try:
+            while self.running:
+                if self.state == State.SYNC0:
+                    self.data = b''
+                    self.measurements = []
+                    if self.lidar_serial.read() == b'\x54':
+                        self.data = b'\x54'
+                        self.state = State.SYNC1
+                elif self.state == State.SYNC1:
+                    if self.lidar_serial.read() == b'\x2C':
+                        self.state = State.SYNC2
+                        self.data += b'\x2C'
+                    else:
+                        self.state = State.SYNC0
+                elif self.state == State.SYNC2:
+                    self.data += self.lidar_serial.read(PACKET_LENGTH - 2)
+                    if len(self.data) != PACKET_LENGTH:
+                        self.state = State.SYNC0
+                        continue
+                    self.measurements += LidarDataParser.parse_lidar_data(self.data)
+                    self.state = State.LOCKED
+                elif self.state == State.LOCKED:
+                    self.data = self.lidar_serial.read(PACKET_LENGTH)
+                    if self.data[0] != 0x54 or len(self.data) != PACKET_LENGTH:
+                        print("WARNING: Serial sync lost")
+                        self.state = State.SYNC0
+                        continue
+                    self.measurements += LidarDataParser.parse_lidar_data(self.data)
+                    if len(self.measurements) > MEASUREMENTS_PER_PLOT:
+                        self.state = State.UPDATE_PLOT
+                elif self.state == State.UPDATE_PLOT:
+                    self.plotter.update_plot(self.measurements)
+                    self.state = State.LOCKED
+                    self.measurements = []
+        except KeyboardInterrupt:
+            print("Program interrupted by user")
+            self.running = False
+
+# ----------------------------------------------------------------------
+# Lidar Data Parser
+# ----------------------------------------------------------------------
 class LidarDataParser:
     @staticmethod
     def parse_lidar_data(data):
@@ -52,6 +126,9 @@ class LidarDataParser:
             print(length, speed, start_angle, *pos_data, stop_angle, timestamp, crc)
         return list(zip(angle, distance, confidence))
 
+# ----------------------------------------------------------------------
+# Lidar Plotter
+# ----------------------------------------------------------------------
 class LidarPlotter:
     def __init__(self):
         plt.ion()
@@ -90,78 +167,20 @@ class LidarPlotter:
         y = np.cos(np.radians(angle)) * (distance / 1000.0)
         return x, y, confidence
 
-class PWMController:
-    def __init__(self, pin):
-        self.pin = pin
-        GPIO.setup(self.pin, GPIO.OUT)  # Ensure the pin is set up as an output
-        self.pwm = GPIO.PWM(self.pin, 1000)  # Initialize PWM on the specified pin
-
-    def set_speed(self, duty_cycle):
-        """Set the motor speed using PWM duty cycle (0-100%)."""
-        self.pwm.start(duty_cycle)
-
-    def stop(self):
-        """Stop the PWM signal."""
-        self.pwm.stop()
-
-class LidarController:
-    def __init__(self, port=SERIAL_PORT, pwm_pin=18):
-        self.lidar_serial = serial.Serial(port, 230400, timeout=0.5)
-        self.measurements = []
-        self.data = b''
-        self.state = State.SYNC0
-        self.plotter = LidarPlotter()
-        self.pwm_controller = PWMController(pwm_pin)
-        self.running = True
-
-    def run(self):
-        # Set initial motor speed (e.g., 50% duty cycle)
-        self.pwm_controller.set_speed(100)
-
-        while self.running:
-            if self.state == State.SYNC0:
-                self.data = b''
-                self.measurements = []
-                if self.lidar_serial.read() == b'\x54':
-                    self.data = b'\x54'
-                    self.state = State.SYNC1
-            elif self.state == State.SYNC1:
-                if self.lidar_serial.read() == b'\x2C':
-                    self.state = State.SYNC2
-                    self.data += b'\x2C'
-                else:
-                    self.state = State.SYNC0
-            elif self.state == State.SYNC2:
-                self.data += self.lidar_serial.read(PACKET_LENGTH - 2)
-                if len(self.data) != PACKET_LENGTH:
-                    self.state = State.SYNC0
-                    continue
-                self.measurements += LidarDataParser.parse_lidar_data(self.data)
-                self.state = State.LOCKED
-            elif self.state == State.LOCKED:
-                self.data = self.lidar_serial.read(PACKET_LENGTH)
-                if self.data[0] != 0x54 or len(self.data) != PACKET_LENGTH:
-                    print("WARNING: Serial sync lost")
-                    self.state = State.SYNC0
-                    continue
-                self.measurements += LidarDataParser.parse_lidar_data(self.data)
-                if len(self.measurements) > MEASUREMENTS_PER_PLOT:
-                    self.state = State.UPDATE_PLOT
-            elif self.state == State.UPDATE_PLOT:
-                self.plotter.update_plot(self.measurements)
-                self.state = State.LOCKED
-                self.measurements = []
-
+# ----------------------------------------------------------------------
+# Main Execution
+# ----------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Lidar Controller with PWM pin selection.")
-    parser.add_argument('--pwm_pin', type=int, default=18, help='GPIO pin for PWM output (default: 18)')
+    parser.add_argument('--pwm_pin', type=int, default=12, help='GPIO pin for PWM output (default: 12)')
+    parser.add_argument('--pwm_frequency', type=int, default=2000, help='PWM frequency in Hz (default: 1000)')
+    parser.add_argument('--duty_cycle', type=float, default=80.0, help='PWM duty cycle in percentage (default: 80.0)')
     args = parser.parse_args()
 
     try:
-        controller = LidarController(pwm_pin=args.pwm_pin)
+        controller = LidarController(pwm_pin=args.pwm_pin, pwm_frequency=args.pwm_frequency, duty_cycle=args.duty_cycle)
+        controller.plotter = LidarPlotter()  # Initialize the plotter after controller
         controller.run()
-    except KeyboardInterrupt:
-        print("Program interrupted by user")
     finally:
         GPIO.cleanup()
         print("GPIO cleanup completed")
