@@ -1,4 +1,3 @@
-import time
 import RPi.GPIO as gpio
 
 class Pilote():
@@ -7,8 +6,6 @@ class Pilote():
 
     branch_moteur = int #Branche moteur
     branch_direction = int #Branche pour la direction
-
-    periode = 20000 # Periode de 50 ms en microsecondes
 
     def __init__(self, speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
         # Initialisation des differente variable essentiel 
@@ -19,21 +16,27 @@ class Pilote():
 
         # Définir le mode de numérotation des broches
         gpio.setmode(gpio.BOARD)
+        # gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche moteur en sortie
+        gpio.setup(self.branch_moteur, gpio.OUT)  # Configurer en sortie
 
         # Initialisation des broches GPIO
-        gpio.setup(self.branch_moteur, gpio.OUT) #Configuration de la branche moteur en sortie
-        servoDirection = self.branch_direction #gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
+        pwm = gpio.PWM(self.branch_moteur, 28)  # Fréquence de 28 Hz sur la branch_moteur
+        pwm.start(0)
+        self.pwm = pwm
+        # pwm.start(0)  # Démarrer a 0 pour eviter de bouger
+
+        # servoDirection = self.branch_direction #gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
         # servoDirection(0) #Arret du PWM
 
     def adjustSpeed(self):
         #faire un system de com entre le raspi et le resultat de notre decision
         
         self.speed = Pilote.verificationEntrer() #Ajuste la valeur de la vitesses entre -1.0 et 1.0
-        rapportCyclique = Pilote.calculerRapportCyclique(self)
-        signalPWM = Pilote.genererSignalPWM(self.branch_moteur, rapportCyclique)
-        print(f"Ajustement de speed a : {self.speed} \n Signal PWM = {signalPWM}\n Rapport cyclique : {rapportCyclique}%") #print la vitesse après actualisation
+        rapportCyclique, temps_haut = Pilote.calculerRapportCyclique(self)
+        Pilote.genererSignalPWM(self, rapportCyclique)
+        print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") #print la vitesse après actualisation
         
-        return signalPWM #retourne la nouvelle valeur de vitesse 
+        return #retourne la nouvelle valeur de vitesse 
 
     def changeDirection(self):
         self.direction = Pilote.verificationEntrer() #ajuste la direction
@@ -70,33 +73,21 @@ class Pilote():
             return new_speed
 
     def calculerRapportCyclique(self):
+        periode = 20e-3  # Période de 20 ms (0.020 s)
         speed = self.speed
+
         if speed == 0.0:
-            dureeEtatHaut = 1.5
+            temps_haut = 1.5e-3  # Convertir 1.5 ms en secondes
         elif speed > 0.0:
-            dureeEtatHaut = 1.5 + speed * (2.0 - 1.5) # Interpolation vers 2 ms
+            temps_haut = 1.5e-3 + speed * (2.0e-3 - 1.5e-3)  # Vers 2 ms (positif)
         else:
-            dureeEtatHaut = 1.5 + speed * (1.3 - 1.5) # Interpolation vers 1.3 ms
-        
-        return (dureeEtatHaut / 20.0) * 100.0 # Convertion en %
+            temps_haut = 1.5e-3 + speed * (1.3e-3 - 1.5e-3)  # Vers 1.3 ms (négatif)
 
-    def genererSignalPWM(branch_moteur, rapportCyclique):
-        # gpio.setup(branch_moteur, gpio.OUT)
-        # print(Pilote.micros())
-        debutCycle = time.time()
-        dureeEtatHaut = ((rapportCyclique / 100.0) * Pilote.periode)
-        actuel = time.time()
+        rapport_cyclique = (temps_haut / periode) * 100  # En pourcentage
+        return rapport_cyclique, temps_haut
 
-        # Gpio peut être a ecrire ailleur 
 
-        if (actuel - debutCycle < dureeEtatHaut):
-            PWM = 1
-            gpio.output(branch_moteur, gpio.HIGH)
-        else:
-            PWM = 0
-            gpio.output(branch_moteur, gpio.LOW)
-        
-        if (actuel - debutCycle >= Pilote.periode):
-            debutCycle = actuel
-        
-        return PWM
+    def genererSignalPWM(self, rapportCyclique):
+        print(rapportCyclique)
+        self.pwm.ChangeDutyCycle(rapportCyclique)
+        return 1
