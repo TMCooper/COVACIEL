@@ -11,7 +11,7 @@ import RPi.GPIO as GPIO
 # System Constants
 # ----------------------------------------------------------------------
 SERIAL_PORT = "/dev/ttyS0"
-MEASUREMENTS_PER_PLOT = 1150
+MEASUREMENTS_PER_PLOT = 1200
 PLOT_MAX_RANGE = 4  # in meters
 PLOT_AUTO_RANGE = False
 PLOT_CONFIDENCE = True
@@ -39,7 +39,7 @@ class State(Enum):
 # PWM Controller
 # ----------------------------------------------------------------------
 class PWMController:
-    def __init__(self, pin, pwm_frequency=2000):
+    def __init__(self, pin, pwm_frequency=2500):
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)  # Ensure the pin is set up as an output
         self.pwm = GPIO.PWM(self.pin, pwm_frequency)  # Initialize PWM on the specified pin
@@ -47,25 +47,26 @@ class PWMController:
 
     def set_speed(self, duty_cycle):
         """Set the motor speed using PWM duty cycle (0-100%)."""
-        self.pwm.start(duty_cycle)
+        if self.pwm is not None:
+            self.pwm.start(duty_cycle)
 
     def stop(self):
         """Stop the PWM signal."""
-        self.pwm.stop()
+        if self.pwm is not None:
+            self.pwm.stop()
 
 # ----------------------------------------------------------------------
 # Lidar Controller
 # ----------------------------------------------------------------------
 class LidarController:
-    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=2000, duty_cycle=80):
-        self.lidar_serial = serial.Serial(port, 230400, timeout=0.5)
+    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=3200, duty_cycle=100):
+        self.lidar_serial = serial.Serial(port, 230400, timeout=0.05)
         self.measurements = []
         self.data = b''
         self.state = State.SYNC0
         self.pwm_controller = PWMController(pwm_pin, pwm_frequency)
         self.pwm_controller.set_speed(duty_cycle)  # Set initial speed
         self.running = True
-
 
     def run(self):
         try:
@@ -173,14 +174,16 @@ class LidarPlotter:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Lidar Controller with PWM pin selection.")
     parser.add_argument('--pwm_pin', type=int, default=12, help='GPIO pin for PWM output (default: 12)')
-    parser.add_argument('--pwm_frequency', type=int, default=2000, help='PWM frequency in Hz (default: 1000)')
-    parser.add_argument('--duty_cycle', type=float, default=80.0, help='PWM duty cycle in percentage (default: 80.0)')
+    parser.add_argument('--pwm_frequency', type=int, default=3200, help='PWM frequency in Hz (default: 3200)')
+    parser.add_argument('--duty_cycle', type=float, default=100.0, help='PWM duty cycle in percentage (default: 100.0)')
     args = parser.parse_args()
 
     try:
         controller = LidarController(pwm_pin=args.pwm_pin, pwm_frequency=args.pwm_frequency, duty_cycle=args.duty_cycle)
         controller.plotter = LidarPlotter()  # Initialize the plotter after controller
         controller.run()
+    except Exception as e:
+        print(f"An error occurred: {e}")
     finally:
         GPIO.cleanup()
         print("GPIO cleanup completed")

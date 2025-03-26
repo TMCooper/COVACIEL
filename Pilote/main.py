@@ -1,4 +1,5 @@
 from function.Pilote import *
+from time import sleep
 
 def main():
     try :
@@ -10,9 +11,10 @@ def main():
         
         # currentDirection = pilote.changeDirection()
         # print(f"Direction actuelle : {currentDirection}")
-        
-        pilote.adjustSpeed()
-        
+        while True:
+            pilote.speed = 1
+            pilote.adjustSpeed()
+            sleep(1)
         # currentSpeed = pilote.adjustSpeed()
         # print(f"Speed actuelle : {currentSpeed}")
         
