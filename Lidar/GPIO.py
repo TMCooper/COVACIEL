@@ -39,7 +39,7 @@ class State(Enum):
 # PWM Controller
 # ----------------------------------------------------------------------
 class PWMController:
-    def __init__(self, pin, pwm_frequency=1000):
+    def __init__(self, pin, pwm_frequency=2000):
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)  # Ensure the pin is set up as an output
         self.pwm = GPIO.PWM(self.pin, pwm_frequency)  # Initialize PWM on the specified pin
@@ -57,7 +57,7 @@ class PWMController:
 # Lidar Controller
 # ----------------------------------------------------------------------
 class LidarController:
-    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=1000, duty_cycle=80):
+    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=2000, duty_cycle=80):
         self.lidar_serial = serial.Serial(port, 230400, timeout=0.5)
         self.measurements = []
         self.data = b''
