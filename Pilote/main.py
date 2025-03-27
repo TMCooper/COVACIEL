@@ -1,18 +1,20 @@
 from function.Pilote import *
+from time import sleep
 
 def main():
     try :
         entrer = False
         
-        pilote = Pilote(0.0, 0.0, 27, 28) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float
+        pilote = Pilote(0.0, 0.0, 11, 13) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float ainsi que les pin utiliser donc 11 pour le moteur et 13 pour la direction
         
-        pilote.changeDirection()
+        # pilote.changeDirection()
         
         # currentDirection = pilote.changeDirection()
         # print(f"Direction actuelle : {currentDirection}")
-        
-        pilote.adjustSpeed()
-        
+        while True:
+            pilote.speed = 1
+            pilote.adjustSpeed()
+            sleep(1)
         # currentSpeed = pilote.adjustSpeed()
         # print(f"Speed actuelle : {currentSpeed}")
         
