@@ -11,7 +11,7 @@ from Camera.class_array import ColorDetector
 
 class CarController:
     def __init__(self):
-        self.pilote = Pilote(0.3, 0.0, 11, 13)  # Départ à 30% de vitesse
+        self.pilote = Pilote(0.15, 0.0, 11, 13)  # Départ à 30% de vitesse
         self.camera = ColorDetector(num_frames=1)
         # self.lidar = LidarController()
 
@@ -26,19 +26,19 @@ class CarController:
 
     def navigate(self):
         print("Démarrage de la navigation...")
-        self.pilote.adjustSpeed(0.3)  # Démarre avec une vitesse de 30%
+        self.pilote.adjustSpeed(0.15)  # Démarre avec une vitesse de 30%
         
         while True:
             red_left, green_right = self.check_colors()
 
             if red_left and green_right:
                 print("✅ Couleurs correctes, on continue.")
-                self.pilote.adjustSpeed(0.6)  # Maintien la vitesse
+                self.pilote.adjustSpeed(0.15)  # Maintien la vitesse
             else:
                 print("❌ Couleurs incorrectes, demi-tour.")
-                self.pilote.adjustSpeed(-0.3)  # Reculer légèrement
+                self.pilote.adjustSpeed(-1)  # Reculer légèrement
                 time.sleep(0.5)  # Juste un court instant
-                self.pilote.adjustSpeed(0.3)  # Repartir après correction
+                self.pilote.adjustSpeed(-1)  # Repartir après correction
             
             # Détection d'obstacle
             best_angle = self.check_obstacles()
