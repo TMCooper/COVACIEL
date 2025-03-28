@@ -1,5 +1,5 @@
 import time
-from testcam.class_array import ColorDetector
+from Camera.class_array import ColorDetector
 from Lidar.lidar_test.lidar_code_restruct import LidarController
 from Pilote.function.Pilote import Pilote
 
