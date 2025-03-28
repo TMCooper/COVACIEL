@@ -16,22 +16,22 @@ class Pilote():
 
         # Définir le mode de numérotation des broches
         gpio.setmode(gpio.BOARD)
-        # gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche moteur en sortie
-        gpio.setup(self.branch_moteur, gpio.OUT)  # Configurer en sortie
+        gpio.setup(self.branch_moteur, gpio.OUT)  # Configuration de la branche moteur en sortie
+        # gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche dirrection en sortie
 
         # Initialisation des broches GPIO
         pwm = gpio.PWM(self.branch_moteur, 28)  # Fréquence de 28 Hz sur la branch_moteur
         pwm.start(0)
         self.pwm = pwm
-        # pwm.start(0)  # Démarrer a 0 pour eviter de bouger
 
-        # servoDirection = self.branch_direction #gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
-        # servoDirection(0) #Arret du PWM
+        # direction = gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
+        # direction.start(0)  # Mise a l'angle 0°
+        # self.direction = direction
 
-    def adjustSpeed(self):
+    def adjustSpeed(self, Control_car_input):
         #faire un system de com entre le raspi et le resultat de notre decision
         
-        self.speed = Pilote.verificationEntrer() #Ajuste la valeur de la vitesses entre -1.0 et 1.0
+        self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
         rapportCyclique, temps_haut = Pilote.calculerRapportCyclique(self)
         Pilote.genererSignalPWM(self, rapportCyclique)
         print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") #print la vitesse après actualisation
@@ -61,9 +61,9 @@ class Pilote():
         print(f"Valeur actuelle de la direction prise : {self.direction}") # affiche directement la valeur de la direction
         return self.direction # retourne la valeur de speed
     
-    def verificationEntrer():
-        new_speed = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ") # Demande a l'utilisateur la nouvelle valeur de new_speed convenue entre -1.0 et 1.0 
-        new_speed = float(new_speed) # Convertie la valeur choisit en float pour la conparaison
+    def verificationEntrer(Control_car_input):
+        # new_speed = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ") # Demande a l'utilisateur la nouvelle valeur de new_speed convenue entre -1.0 et 1.0 
+        new_speed = float(Control_car_input) # Convertie la valeur choisit en float pour la conparaison
         if new_speed <= 1.0 and new_speed >= -1.0: # Compare la variable new_speed pour quel sois obligatoirement entre -1.0 et 1.0 
             return new_speed #si c'est oui alors on envoie directement la valeur
         else: 
@@ -73,17 +73,16 @@ class Pilote():
             return new_speed
 
     def calculerRapportCyclique(self):
-        periode = 20e-3  # Période de 20 ms (0.020 s)
         speed = self.speed
+        periode = 20e-3  # Période de 20 ms (0.020 s)
 
-        if speed == 0.0:
-            temps_haut = 1.5e-3  # Convertir 1.5 ms en secondes
-        elif speed > 0.0:
-            temps_haut = 1.5e-3 + speed * (2.0e-3 - 1.5e-3)  # Vers 2 ms (positif)
+        if speed >= 0:
+            temps_haut = 1.5e-3 + speed * (2.0e-3 - 1.5e-3)  # Jusqu’à 2.0 ms
         else:
-            temps_haut = 1.5e-3 + speed * (1.3e-3 - 1.5e-3)  # Vers 1.3 ms (négatif)
+            temps_haut = 1.5e-3 + speed * (1.5e-3 - 1.3e-3)  # Jusqu’à 1.3 ms
 
-        rapport_cyclique = (temps_haut / periode) * 100  # En pourcentage
+        rapport_cyclique = (temps_haut / periode) * 100
+
         return rapport_cyclique, temps_haut
 
 
