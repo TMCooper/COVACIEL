@@ -93,6 +93,7 @@
 - [x] Completed Quest
   - [x] Comprendre le cahier des charges
   - [x] Creation des base de la Classe Pilote
+  - [x] Amélioration du code Pilote capacité d'avancer
 
 > [!WARNING]
 > Vous êtes sur le README.md main.
