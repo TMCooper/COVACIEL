@@ -11,7 +11,7 @@ from Lidar.GPIO import LidarController, LidarAngleDistance
 
 class CarController:
     def __init__(self):
-        self.pilote = Pilote(0.0, 0.0, 11, 13)  # Pins moteur et direction
+        self.pilote = Pilote(0.0, 0.0, 11, 13)  # Moteur sur GPIO 11, direction sur GPIO 13
         self.camera = ColorDetector(num_frames=1)
         self.lidar = LidarController()
     
@@ -21,51 +21,43 @@ class CarController:
         return red_left, green_right
     
     def check_obstacles(self):
-        measurements = self.lidar.measurements  # Récupérer les mesures du LiDAR
+        measurements = self.lidar.measurements  # Récupération des mesures du LiDAR
         distances = LidarAngleDistance.get_distances(measurements)
-        return distances
-    
-    def find_best_angle(self):
-        best_angle = None
-        max_distance = 0
-        for angle, distance, _ in self.lidar.measurements:
-            if distance > max_distance:
-                max_distance = distance
-                best_angle = angle
-        return best_angle
+        
+        distance_right = distances.get(0)  # Distance à 0° (devant)
+        distance_left = distances.get(180)  # Distance à 180° (derrière)
+
+        obstacle_right = distance_right is not None and distance_right < 5  # 50 cm
+        obstacle_left = distance_left is not None and distance_left < 5  # 50 cm
+
+        return obstacle_right, obstacle_left
     
     def navigate(self):
         while True:
             red_left, green_right = self.check_colors()
-            distances = self.check_obstacles()
-            
+
             if red_left and green_right:
                 print("Couleurs correctes, avancée.")
-                self.pilote.adjustSpeed(0.15)
+                self.pilote.adjustSpeed(0.3)
             else:
                 print("Couleurs incorrectes, demi-tour.")
-                self.pilote.adjustSpeed(0)
+                self.pilote.adjustSpeed(0.15)
                 time.sleep(1)
-            
-            distance_right = distances.get(0)  # Distance à 0°    
-            distance_left = distances.get(180)  # Distance à 180°
 
-            obstacle_right = distance_right is not None and distance_right < 5  # 50 cm
-            obstacle_left = distance_left is not None and distance_left < 5  # 50 cm
-            
-            if obstacle_right or obstacle_left:
-                best_angle = self.find_best_angle()
-                if best_angle is not None:
-                    print(f"Obstacle détecté ! Aller vers l'angle {best_angle}°")
-                    direction = -0.5 if best_angle > 180 else 0.5
-                    #self.pilote.adjustDirection(direction)
-                else:
-                    print("Aucun bon angle trouvé, arrêt.")
-                    self.pilote.adjustSpeed(0.0)
-            #else:
-                #self.pilote.adjustDirection(0.0)  # Aller tout droit
-            
-            time.sleep(0.1)  # Pause pour éviter la surcharge CPU
+            # Vérification des obstacles
+            obstacle_right, obstacle_left = self.check_obstacles()
+
+            if obstacle_right:
+                print("Obstacle à droite, tourner à gauche.")
+                #self.pilote.adjustDirection(-0.5)
+            elif obstacle_left:
+                print("Obstacle à gauche, tourner à droite.")
+                #self.pilote.adjustDirection(0.5)
+            else:
+                print("Trajet dégagé.")
+                #self.pilote.adjustDirection(0.0)
+
+            time.sleep(0.1)  # Pause pour éviter une surcharge CPU
 
 if __name__ == "__main__":
     car = CarController()
