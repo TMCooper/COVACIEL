@@ -128,6 +128,31 @@ class LidarDataParser:
         return list(zip(angle, distance, confidence))
 
 # ----------------------------------------------------------------------
+# Lidar AngleData Droite et gauche
+# ----------------------------------------------------------------------
+class LidarAngleDistance:
+    """
+    Classe permettant d'extraire la distance aux angles 0° et 180° depuis les données du LiDAR.
+    """
+    @staticmethod
+    def get_distances(measurements):
+        """
+        Extrait la distance aux angles 0° et 180° à partir des mesures du LiDAR.
+        :param measurements: Liste de tuples (angle, distance, confiance)
+        :return: Dictionnaire contenant les distances pour les angles 0° et 180°
+        """
+        distances = {0: None, 180: None}
+        
+        for angle, distance, _ in measurements:
+            if round(angle) == 0:
+                distances[0] = distance
+            elif round(angle) == 180:
+                distances[180] = distance
+        
+        return distances
+
+
+# ----------------------------------------------------------------------
 # Lidar Plotter
 # ----------------------------------------------------------------------
 class LidarPlotter:

@@ -7,52 +7,65 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from Pilote.function.Pilote import Pilote
 from Camera.class_array import ColorDetector
-# from Lidar.lidar_test.lidar_code_restruct import LidarController
+from Lidar.GPIO import LidarController, LidarAngleDistance
 
 class CarController:
     def __init__(self):
-        self.pilote = Pilote(0.15, 0.0, 11, 13)  # Départ à 30% de vitesse
+        self.pilote = Pilote(0.0, 0.0, 11, 13)  # Pins moteur et direction
         self.camera = ColorDetector(num_frames=1)
-        # self.lidar = LidarController()
-
+        self.lidar = LidarController()
+    
     def check_colors(self):
         self.camera.run_detection()
         red_left, green_right = self.camera.results[-1][1], self.camera.results[-1][2]
         return red_left, green_right
-
+    
     def check_obstacles(self):
-        # return self.lidar.get_best_angle()
-        return None  # Simulation pour éviter les erreurs
-
+        measurements = self.lidar.measurements  # Récupérer les mesures du LiDAR
+        distances = LidarAngleDistance.get_distances(measurements)
+        return distances
+    
+    def find_best_angle(self):
+        best_angle = None
+        max_distance = 0
+        for angle, distance, _ in self.lidar.measurements:
+            if distance > max_distance:
+                max_distance = distance
+                best_angle = angle
+        return best_angle
+    
     def navigate(self):
-        print("Démarrage de la navigation...")
-        self.pilote.adjustSpeed(0.15)  # Démarre avec une vitesse de 30%
-        
         while True:
             red_left, green_right = self.check_colors()
-
-            if red_left and green_right:
-                print("✅ Couleurs correctes, on continue.")
-                self.pilote.adjustSpeed(0.15)  # Maintien la vitesse
-            else:
-                print("❌ Couleurs incorrectes, demi-tour.")
-                self.pilote.adjustSpeed(-1)  # Reculer légèrement
-                time.sleep(0.5)  # Juste un court instant
-                self.pilote.adjustSpeed(-1)  # Repartir après correction
+            distances = self.check_obstacles()
             
-            # Détection d'obstacle
-            best_angle = self.check_obstacles()
-            if best_angle is not None:
-                if best_angle < -10:
-                    print("🛑 Obstacle à droite, tourner à gauche.")
-                    self.pilote.direction = -0.5
-                elif best_angle > 10:
-                    print("🛑 Obstacle à gauche, tourner à droite.")
-                    self.pilote.direction = 0.5
-                else:
-                    self.pilote.direction = 0.0  # Droit si pas d'obstacle
+            if red_left and green_right:
+                print("Couleurs correctes, avancée.")
+                self.pilote.adjustSpeed(0.15)
+            else:
+                print("Couleurs incorrectes, demi-tour.")
+                self.pilote.adjustSpeed(0)
+                time.sleep(1)
+            
+            distance_right = distances.get(0)  # Distance à 0°    
+            distance_left = distances.get(180)  # Distance à 180°
 
-            time.sleep(0.1)  # Pause pour éviter surcharge CPU
+            obstacle_right = distance_right is not None and distance_right < 5  # 50 cm
+            obstacle_left = distance_left is not None and distance_left < 5  # 50 cm
+            
+            if obstacle_right or obstacle_left:
+                best_angle = self.find_best_angle()
+                if best_angle is not None:
+                    print(f"Obstacle détecté ! Aller vers l'angle {best_angle}°")
+                    direction = -0.5 if best_angle > 180 else 0.5
+                    #self.pilote.adjustDirection(direction)
+                else:
+                    print("Aucun bon angle trouvé, arrêt.")
+                    self.pilote.adjustSpeed(0.0)
+            #else:
+                #self.pilote.adjustDirection(0.0)  # Aller tout droit
+            
+            time.sleep(0.1)  # Pause pour éviter la surcharge CPU
 
 if __name__ == "__main__":
     car = CarController()

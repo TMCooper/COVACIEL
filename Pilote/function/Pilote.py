@@ -89,7 +89,6 @@ class Pilote():
 
 
     def genererSignalPWM(self, rapportCyclique):
-        self.pwm.ChangeDutyCycle(0)
         sleep(0.05)
         self.pwm.ChangeDutyCycle(rapportCyclique)
         return
