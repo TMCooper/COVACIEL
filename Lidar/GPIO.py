@@ -141,13 +141,13 @@ class LidarAngleDistance:
         :param measurements: Liste de tuples (angle, distance, confiance)
         :return: Dictionnaire contenant les distances pour les angles 0° et 180°
         """
-        distances = {0: None, 180: None}
+        distances = {90: None, 270: None}
         
         for angle, distance, _ in measurements:
-            if round(angle) == 0:
-                distances[0] = distance
-            elif round(angle) == 180:
-                distances[180] = distance
+            if round(angle) == 90:
+                distances[90] = distance
+            elif round(angle) == 270:
+                distances[270] = distance
         
         return distances
 
@@ -167,6 +167,7 @@ class LidarPlotter:
         self.graph.figure.canvas.mpl_connect('close_event', self.on_plot_close)
         plt.xlim(-PLOT_MAX_RANGE, PLOT_MAX_RANGE)
         plt.ylim(-PLOT_MAX_RANGE, PLOT_MAX_RANGE)
+        self.key_points = None  # Stocke les points verts pour 0° et 180°
 
     def on_plot_close(self, event):
         self.running = False
@@ -182,7 +183,25 @@ class LidarPlotter:
             self.graph = plt.scatter(x, y, c=c, marker=".", vmin=0, vmax=255, cmap=PLOT_CONFIDENCE_COLOUR_MAP)
         else:
             self.graph = plt.plot(x, y, 'b.')[0]
+        
+        self.highlight_key_angles(measurements)  # Ajout des points verts pour 0° et 180°
         plt.pause(0.00001)
+
+    def highlight_key_angles(self, measurements):
+        distances = LidarAngleDistance.get_distances(measurements)
+        
+        key_x, key_y = [], []
+        for angle, distance in distances.items():
+            if distance is not None:
+                x = np.sin(np.radians(angle)) * (distance / 1000.0)
+                y = np.cos(np.radians(angle)) * (distance / 1000.0)
+                key_x.append(x)
+                key_y.append(y)
+        
+        if self.key_points:
+            self.key_points.remove()  # Supprime les anciens points verts
+        self.key_points = plt.scatter(key_x, key_y, color='green', marker='o', s=100, label='Angles 0° & 180°')
+
 
     @staticmethod
     def get_xyc_data(measurements):
