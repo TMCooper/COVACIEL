@@ -37,14 +37,16 @@ class Pilote():
         Pilote.genererSignalPWM(self, rapportCyclique)
         print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") #print la vitesse après actualisation
         
-        return #retourne la nouvelle valeur de vitesse 
+        return 
 
-    def changeDirection(self):
-        self.direction = Pilote.verificationEntrer() #ajuste la direction
-        angleServo = map(self.direction * 100, -100, 100, 0, 180) #converti la direction entre -1.0 et 1.0 en angle
-        Pilote.servoDirection.ChangeDutyCycle(angleServo) #ecriture de l'angle sur le servo moteur
-        print(f"Ajustement de direction a : {self.direction}") #print la direction après ajustement
-        return self.direction #retourne la direction actualiser
+    def changeDirection(self, Control_direction_input):
+
+        self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste la direction
+        rapportCyclique, temps_haut = Pilote.calculerRapportCyclique(self) # Converti la direction entre -1.0 et 1.0
+        Pilote.genererSignalPWM(self, rapportCyclique) # Ecriture de l'angle sur le servo moteur
+        print(f"Ajustement de direction a : {self.direction} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") # Print la direction après ajustement
+        
+        return
     
     def applyBrakes(self, entrer):
         if entrer == True:
@@ -76,9 +78,10 @@ class Pilote():
 
     def calculerRapportCyclique(self):
         speed = self.speed
+        direction = self.direction
         periode = 20e-3  # Période de 20 ms (0.020 s)
 
-        if speed >= 0:
+        if speed >= 0 or direction >= 0 :
             temps_haut = 1.5e-3 + speed * (2.0e-3 - 1.5e-3)  # Jusqu’à 2.0 ms
         else:
             temps_haut = 1.5e-3 + speed * (1.5e-3 - 1.3e-3)  # Jusqu’à 1.3 ms
