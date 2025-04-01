@@ -1,4 +1,5 @@
 import RPi.GPIO as gpio
+from time import sleep
 
 class Pilote():
     speed = float
@@ -24,7 +25,7 @@ class Pilote():
         pwm.start(0)
         self.pwm = pwm
 
-        # direction = gpio.PWM(branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
+        # direction = gpio.PWM(SELF.branch_direction, 50) #creation d'un PWM sur la branche 28 pour le moteur
         # direction.start(0)  # Mise a l'angle 0°
         # self.direction = direction
 
@@ -54,6 +55,7 @@ class Pilote():
             return False
     
     def getCurrentSpeed(self):
+        # self.pwm.
         print(f"Valeur actuelle de speed : {self.speed}") #affiche directement la valeur de speed
         return self.speed #retourne la valeur de speed au besoins
     
@@ -87,6 +89,7 @@ class Pilote():
 
 
     def genererSignalPWM(self, rapportCyclique):
-        print(rapportCyclique)
+        self.pwm.ChangeDutyCycle(0)
+        sleep(0.05)
         self.pwm.ChangeDutyCycle(rapportCyclique)
-        return 1
+        return

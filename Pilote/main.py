@@ -13,7 +13,7 @@ def main():
             # Control_car_input = 0.3
             Control_car_input = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ")
             pilote.adjustSpeed(Control_car_input)
-            sleep(1)
+            # sleep(1)
         # currentSpeed = pilote.adjustSpeed()
         # print(f"Speed actuelle : {currentSpeed}")
         
