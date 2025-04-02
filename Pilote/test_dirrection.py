@@ -1,11 +1,6 @@
 import RPi.GPIO as GPIO
 import time
 
-# Paramètres
-periode = 20e-3  # 20 ms (50 Hz)
-temps_haut = 2e-3  # 1.6 ms
-rapport_cyclique = (temps_haut / periode) * 100  # Duty cycle en %
-
 broche_direction = 13
 
 # Initialisation GPIO
@@ -15,7 +10,7 @@ GPIO.setup(broche_direction, GPIO.OUT)
 
 # Création du signal PWM
 direction = GPIO.PWM(broche_direction, 28)  # Fréquence correcte (28 Hz)
-direction.start(rapport_cyclique)  # Démarrer avec le bon duty cycle
+direction.start(0)  # Démarrer avec le bon duty cycle
 
 try:
     while True:

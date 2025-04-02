@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import serial
 from enum import Enum
 import struct
@@ -59,7 +59,7 @@ class PWMController:
 # Lidar Controller
 # ----------------------------------------------------------------------
 class LidarController:
-    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=3200, duty_cycle=100):
+    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=300, duty_cycle=100):
         self.lidar_serial = serial.Serial(port, 230400, timeout=0.05)
         self.measurements = []
         self.data = b''
@@ -107,6 +107,9 @@ class LidarController:
             print("Program interrupted by user")
             self.running = False
 
+    def get_measurements(self):
+        """Retourne les mesures actuelles du LiDAR."""
+        return self.measurements
 # ----------------------------------------------------------------------
 # Lidar Data Parser
 # ----------------------------------------------------------------------
@@ -131,9 +134,8 @@ class LidarDataParser:
 # Lidar AngleData Droite et gauche
 # ----------------------------------------------------------------------
 class LidarAngleDistance:
-    """
-    Classe permettant d'extraire la distance aux angles 0° et 180° depuis les données du LiDAR.
-    """
+    
+    distance_max = 1000
     @staticmethod
     def get_distances(measurements):
         """
@@ -150,6 +152,14 @@ class LidarAngleDistance:
                 distances[270] = distance
         
         return distances
+    #@staticmethod
+    #def highlight_obstacles(measurements):
+       # """
+       # Détecte les obstacles en fonction de la distance_max.
+        #:param measurements: Liste de tuples (angle, distance, confiance)
+       # :return: Liste des obstacles sous forme de tuples (angle, distance)
+        #"""
+        ##return [(angle, distance) for angle, distance, _ in measurements if distance is not None and distance <= LidarAngleDistance.distance_max]
 
 
 # ----------------------------------------------------------------------
@@ -167,25 +177,39 @@ class LidarPlotter:
         self.graph.figure.canvas.mpl_connect('close_event', self.on_plot_close)
         plt.xlim(-PLOT_MAX_RANGE, PLOT_MAX_RANGE)
         plt.ylim(-PLOT_MAX_RANGE, PLOT_MAX_RANGE)
-        self.key_points = None  # Stocke les points verts pour 0° et 180°
-
+        
     def on_plot_close(self, event):
-        self.running = False
+        """Handle the plot close event."""
+        print("Plot window closed")
+        # Ajoutez ici le code pour gérer la fermeture du tracé, par exemple, arrêter le contrôleur LiDAR
+        controller.running = False
 
     def update_plot(self, measurements):
         x, y, c = self.get_xyc_data(measurements)
-        if PLOT_AUTO_RANGE:
-            max_val = max([max(abs(x)), max(abs(y))]) * 1.2
-            plt.xlim(-max_val, max_val)
-            plt.ylim(-max_val, max_val)
+        special_points = LidarAngleDistance.get_distances(measurements)
+        obstacles = LidarAngleDistance.highlight_obstacles(measurements)
+        
+        # Tracé principal
         self.graph.remove()
         if PLOT_CONFIDENCE:
             self.graph = plt.scatter(x, y, c=c, marker=".", vmin=0, vmax=255, cmap=PLOT_CONFIDENCE_COLOUR_MAP)
         else:
             self.graph = plt.plot(x, y, 'b.')[0]
         
-        self.highlight_key_angles(measurements)  # Ajout des points verts pour 0° et 180°
-        plt.pause(0.00001)
+        # Ajout des points verts (0° et 180°)
+        for angle, distance in special_points.items():
+            if distance:
+                x_sp = np.sin(np.radians(angle)) * (distance / 1000.0)
+                y_sp = np.cos(np.radians(angle)) * (distance / 1000.0)
+                plt.scatter(x_sp, y_sp, c='green', marker='o', s=50)
+        
+        # Ajout des obstacles en violet
+        #for angle, distance in obstacles:
+           # x_ob = np.sin(np.radians(angle)) * (distance / 1000.0)
+           # y_ob = np.cos(np.radians(angle)) * (distance / 1000.0)
+            #plt.scatter(x_ob, y_ob, c='purple', marker='x', s=50)
+        
+        plt.pause(0.001)
 
     def highlight_key_angles(self, measurements):
         distances = LidarAngleDistance.get_distances(measurements)
@@ -228,6 +252,16 @@ if __name__ == "__main__":
         controller.run()
     except Exception as e:
         print(f"An error occurred: {e}")
+    except KeyboardInterrupt : 
+        print("Program interrupted by user")
     finally:
+        # Ensure the controller stops running
+        controller.running = False
+        # Stop the PWM signal
+        controller.pwm_controller.stop()
+        # Clean up GPIO resources
         GPIO.cleanup()
         print("GPIO cleanup completed")
+        # Close all matplotlib windows
+        plt.close('all')
+        print("Plot windows closed")
