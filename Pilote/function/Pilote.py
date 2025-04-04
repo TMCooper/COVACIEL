@@ -30,7 +30,7 @@ class Pilote():
         # self.direction = direction
 
     def adjustSpeed(self, Control_car_input):
-        #faire un system de com entre le raspi et le resultat de notre decision
+        # Faire un system de com entre le raspi et le resultat de notre decision
         
         self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
         rapportCyclique, temps_haut = Pilote.calculerRapportCyclique(self)
@@ -89,7 +89,6 @@ class Pilote():
         rapport_cyclique = (temps_haut / periode) * 100
 
         return rapport_cyclique, temps_haut
-
 
     def genererSignalPWM(self, rapportCyclique):
         sleep(0.05)

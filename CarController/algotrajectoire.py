@@ -41,16 +41,16 @@ class CarController:
                 self.pilote.adjustSpeed(0.8)  # Repartir après correction
             
             # Détection d'obstacle
-            best_angle = self.check_obstacles()
-            if best_angle is not None:
-                if best_angle < -10:
-                    print("🛑 Obstacle à droite, tourner à gauche.")
-                    self.pilote.direction = 0.8
-                elif best_angle > 10:
-                    print("🛑 Obstacle à gauche, tourner à droite.")
-                    self.pilote.direction = 0.8
-                else:
-                    self.pilote.direction = 0.0  # Droit si pas d'obstacle
+            #best_angle = self.check_obstacles()
+            #if best_angle is not None:
+                #if best_angle < -10:
+                    #print("🛑 Obstacle à droite, tourner à gauche.")
+                    #self.pilote.direction = 0.8
+                #elif best_angle > 10:
+                    #print("🛑 Obstacle à gauche, tourner à droite.")
+                    #self.pilote.direction = 0.8
+                #else:
+                    #self.pilote.direction = 0.0  # Droit si pas d'obstacle
 
             time.sleep(0.1)  # Pause pour éviter surcharge CPU
 
