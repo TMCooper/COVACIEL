@@ -28,7 +28,7 @@ class LidarSystem:
         LOCKED = 4
         UPDATE_PLOT = 5
 
-    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=3200, duty_cycle=100):
+    def __init__(self, port=SERIAL_PORT, pwm_pin=12, pwm_frequency=4700, duty_cycle=100):
         self.lidar_serial = serial.Serial(port, 230400, timeout=0.05)
         self.measurements = []
         self.data = b''
