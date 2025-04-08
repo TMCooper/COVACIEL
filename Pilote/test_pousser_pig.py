@@ -1,5 +1,4 @@
 import pigpio
-import time
 
 # Paramètres
 periode = 20e-3  # 20 ms (50 Hz)
@@ -33,8 +32,10 @@ print(f"Démarrage du moteur à {rapport_cyclique:.2f}% de PWM")
 
 try:
     while True:
-        time.sleep(1)  # Garder le signal stable sans surcharge CPU
-
+        if __debug__:  # Garder le signal stable sans surcharge CPU
+            print(__debug__)
+        else: 
+            continue
 except KeyboardInterrupt:
     print("\nArrêt du programme")
 

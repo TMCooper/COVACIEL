@@ -1,9 +1,8 @@
 from function.Pilote import *
-from time import sleep
 
 def main():
     try :        
-        pilote = Pilote(0.0, 0.0, 11, 13) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float ainsi que les pin utiliser donc 11 pour le moteur et 13 pour la direction
+        pilote = Pilote(0.0, 0.0, 11, 15) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float ainsi que les pin utiliser donc 11 pour le moteur et 13 pour la direction
         
         # pilote.changeDirection()
         
@@ -12,9 +11,9 @@ def main():
         while True:
             # Control_car_input = 0.3
             Control_car_input = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ")
-            # Control_direction_input = input("Dans quel dirrection voulez vous allez (-1.0 / 1.0) ? : ")
+            Control_direction_input = input("Dans quel dirrection voulez vous allez (-1.0 / 1.0) ? : ")
             pilote.adjustSpeed(Control_car_input)
-            # pilote.changeDirection(Control_direction_input)
+            pilote.changeDirection(Control_direction_input)
             # sleep(1)
         # currentSpeed = pilote.adjustSpeed()
         # print(f"Speed actuelle : {currentSpeed}")

@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 
-broche_direction = 13
+broche_direction = 15
 
 # Initialisation GPIO
 # Initialisation de la GPIO
@@ -14,31 +14,12 @@ direction.start(0)  # Démarrer avec le bon duty cycle
 
 try:
     while True:
-        periode = 20e-3  # 20 ms 
-        temps_haut = 1.54e-3  # 1.54 ms
-        rapport_cyclique = (temps_haut / periode) * 100  # Duty cycle en %
+        # periode = 20e-3  # 20 ms 
+        # temps_haut = 1.38e-3  # 1.54 ms
+        # rapport_cyclique = (temps_haut / periode) * 100  # Duty cycle en %
         
-        print(f"Tourne à gauche(+10°)\n rapport cyclique : {rapport_cyclique}\n Temps Haut : {temps_haut}")
-        direction.ChangeDutyCycle(rapport_cyclique)  # 1.22 ms (gauche)
-        time.sleep(1)  # Maintien 1s
-
-        
-        periode = 20e-3  # 20 ms 
-        temps_haut = 1.38e-3  # 1.38 ms
-        rapport_cyclique = (temps_haut / periode) * 100  # Duty cycle en %
-        
-        print(f"Retour au centre (0°)\n rapport cyclique : {rapport_cyclique}\n Temps Haut : {temps_haut}")
-        direction.ChangeDutyCycle(rapport_cyclique)  # 1.38 ms (neutre)
-        time.sleep(1)  # Maintien 1s
-
-
-        periode = 20e-3  # 20 ms 
-        temps_haut = 1.22e-3  # 1.22 ms
-        rapport_cyclique = (temps_haut / periode) * 100  # Duty cycle en %
-        
-        print(f"Tourne à droite (-10°)\n rapport cyclique : {rapport_cyclique}\n Temps Haut : {temps_haut}")
-        direction.ChangeDutyCycle(rapport_cyclique)  # 1.54 ms (droite)
-        time.sleep(1)  # Maintien 1s
+        # print(f"Tourne à gauche(+10°)\n rapport cyclique : {rapport_cyclique}\n Temps Haut : {temps_haut}")
+        direction.ChangeDutyCycle(7.7)  # 1.22 ms (gauche)
 
 except KeyboardInterrupt:
     print("Arrêt du programme")
