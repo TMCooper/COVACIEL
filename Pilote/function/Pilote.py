@@ -1,5 +1,4 @@
 import RPi.GPIO as gpio
-from threading import Thread
 
 class Pilote():
     speed = float
@@ -33,7 +32,7 @@ class Pilote():
         # Faire un system de com entre le raspi et le resultat de notre decision
         
         self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
-        rapportCyclique = Pilote.calculerRapportCyclique(self)
+        rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
         Pilote.genererSignalPWM(self, 0, rapportCyclique)
         # print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") #print la vitesse après actualisation
 
@@ -42,7 +41,7 @@ class Pilote():
     def changeDirection(self, Control_direction_input):
 
         self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste la direction
-        rapportCyclique = Pilote.calculerRapportCyclique(self) # Converti la direction entre -1.0 et 1.0
+        rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Converti la direction entre -1.0 et 1.0
         Pilote.genererSignalPWM(self, 1, rapportCyclique) # Ecriture de l'angle sur le servo moteur
         # print(f"Ajustement de direction a : {self.direction} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") # Print la direction après ajustement
         
@@ -76,20 +75,35 @@ class Pilote():
                 new_speed = float(new_speed) # Convertie la valeur choisit en float pour la comparaison
             return new_speed
 
-    def calculerRapportCyclique(self):
-        speed = self.speed
-        direction = self.direction
+    def calculerRapportCyclique(self, ID):
         periode = 20e-3  # Période de 20 ms (0.020 s)
 
-        if speed >= 0 or direction >= 0 :
-            temps_haut = 1.5e-3 + speed * (2.0e-3 - 1.5e-3)  # Jusqu’à 2.0 ms
-        else:
-            temps_haut = 1.5e-3 + speed * (1.5e-3 - 1.3e-3)  # Jusqu’à 1.3 ms
+        if ID == 0:
+            speed = self.speed
 
-        rapport_cyclique = (temps_haut / periode) * 100
+            # Calcul du rapport cyclique basé sur la vitesse
+            if speed >= 0:
+                temps_haut = 1.5e-3 + speed * (2.0e-3 - 1.5e-3)  # Jusqu’à 2.0 ms
+            else:
+                temps_haut = 1.5e-3 + speed * (1.5e-3 - 1.3e-3)  # Jusqu’à 1.3 ms
+            
+            rapport_cyclique = (temps_haut / periode) * 100
+            return rapport_cyclique
+        
+        elif ID == 1:
+            direction = self.direction
 
-        return rapport_cyclique
-
+            # Calcul du rapport cyclique basé sur la direction
+            if direction == 0:
+                temps_haut_direction = 1.38e-3  # Temps haut de 1.38 ms
+            elif direction == 1:
+                temps_haut_direction = 1.54e-3  # Temps haut de 1.54 ms
+            elif direction == -1:
+                temps_haut_direction = 1.22e-3  # Temps haut de 1.22 ms
+            
+            rapport_cyclique = (temps_haut_direction / periode) * 100
+            return rapport_cyclique
+        
     def genererSignalPWM(self, ID, rapportCyclique):
         if ID == 0:
             self.pwm.ChangeDutyCycle(rapportCyclique)
