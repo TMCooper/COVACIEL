@@ -1,51 +1,92 @@
+import pandas as pd
 from picamera2 import Picamera2
+from libcamera import Transform
 import cv2
 import numpy as np
 import time
 
-# Initialisation de la caméra
-picam2 = Picamera2()
-picam2.start()
+class ColorDetector:
+    def __init__(self, num_frames=10, flip_horizontal=True, flip_vertical=True):
+        self.picam2 = Picamera2()
+        transform = Transform(hflip=flip_horizontal, vflip=flip_vertical)
+        camera_config = self.picam2.create_preview_configuration(transform=transform)
+        self.picam2.configure(camera_config)
+        self.picam2.start()
 
-# Définition des plages de couleurs en HSV
-lower_red = np.array([0, 120, 70])
-upper_red = np.array([10, 255, 255])
-lower_green = np.array([35, 50, 50])
-upper_green = np.array([85, 255, 255])
+        self.num_frames = num_frames
 
-# Capture et traitement des images
-for i in range(10):
-    frame = picam2.capture_array()  # Capture une image
-    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  # Conversion pour OpenCV
+        self.lower_red1 = np.array([0, 120, 70])
+        self.upper_red1 = np.array([2, 255, 255])
+        self.lower_red2 = np.array([170, 120, 70])
+        self.upper_red2 = np.array([180, 255, 255])
+        self.lower_green = np.array([35, 50, 50])
+        self.upper_green = np.array([85, 255, 255])
 
-    # Appliquer un flou gaussien
-    blurred = cv2.GaussianBlur(frame, (5, 5), 0)
+        self.results = []
 
-    # Conversion en HSV
-    hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
+    def process_frame(self, frame):
+        blurred = cv2.GaussianBlur(frame, (5, 5), 0)
+        hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 
-    # Détection des couleurs
-    mask_red = cv2.inRange(hsv, lower_red, upper_red)
-    mask_green = cv2.inRange(hsv, lower_green, upper_green)
+        mask_red = cv2.inRange(hsv, self.lower_red1, self.upper_red1) + \
+                   cv2.inRange(hsv, self.lower_red2, self.upper_red2)
+        mask_green = cv2.inRange(hsv, self.lower_green, self.upper_green)
 
-    # Dessin des contours
-    for mask, color in [(mask_red, (0, 0, 255)), (mask_green, (0, 255, 0))]:
-        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        for cnt in contours:
-            if cv2.contourArea(cnt) > 500:
-                cv2.drawContours(frame, [cnt], -1, color, 2)
+        kernel = np.ones((5, 5), np.uint8)
+        mask_red = cv2.morphologyEx(mask_red, cv2.MORPH_OPEN, kernel)
+        mask_red = cv2.morphologyEx(mask_red, cv2.MORPH_CLOSE, kernel)
+        mask_green = cv2.morphologyEx(mask_green, cv2.MORPH_OPEN, kernel)
+        mask_green = cv2.morphologyEx(mask_green, cv2.MORPH_CLOSE, kernel)
 
-    # Sauvegarde et affichage
-    filename = f"capture_{i+1}.jpg"
-    cv2.imwrite(filename, frame)
-    print(f"Capture {i+1} enregistrée : {filename}")
-    cv2.imshow("Détection", frame)
+        red_pixels = np.count_nonzero(mask_red)
+        green_pixels = np.count_nonzero(mask_green)
+        total_pixels = frame.shape[0] * frame.shape[1]
 
-    # Attendre 0.1s, quitter si "ESC" est pressé
-    if cv2.waitKey(100) & 0xFF == 27:
-        break
+        red_percent = (red_pixels / total_pixels) * 100
+        green_percent = (green_pixels / total_pixels) * 100
 
-# Nettoyage
-picam2.stop()
-cv2.destroyAllWindows()
-print("Fin du programme.")
+        dominance = "aucune"
+        if red_percent >= 80:
+            dominance = "rouge"
+        elif green_percent >= 80:
+            dominance = "vert"
+
+        return red_percent, green_percent, dominance
+
+    def run_detection(self):
+        print("Début de la détection...")
+        for i in range(self.num_frames):
+            frame = self.picam2.capture_array()
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+            red_percent, green_percent, dominance = self.process_frame(frame)
+
+            self.results.append([
+                i + 1,
+                round(red_percent, 2),
+                round(green_percent, 2),
+                dominance
+            ])
+
+            print(f"Capture {i+1}: Rouge = {red_percent:.2f}%, Vert = {green_percent:.2f}%, Dominance = {dominance}")
+            time.sleep(0.1)
+
+        print("Détection terminée.")
+
+    def save_results(self, filename='out.csv'):
+        df = pd.DataFrame(self.results, columns=["Frame", "Red_Percent", "Green_Percent", "Dominance"])
+        df.to_csv(filename, index=False)
+        print(f"Résultats sauvegardés dans '{filename}'.")
+
+    def cleanup(self):
+        self.picam2.stop()
+        print("Caméra arrêtée.")
+
+# --- Exécution ---
+if __name__ == "__main__":
+    detector = ColorDetector(num_frames=10)
+    try:
+        detector.run_detection()
+        detector.save_results('out.csv')
+    finally:
+        detector.cleanup()
