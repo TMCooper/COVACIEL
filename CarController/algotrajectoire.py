@@ -15,7 +15,6 @@ class CarController:
         self.camera = ColorDetector(num_frames=1)
         self.lidar = LidarKit("/dev/ttyS0", debug=True)  
         self.lidar.start()
-        print("Lidar démarré.")
 
     def check_colors(self):
         self.camera.run_detection()
@@ -34,7 +33,6 @@ class CarController:
 
     def check_obstacles(self):
         points = self.lidar.get_points()
-        print(f" {len(points)} points reçus du LiDAR")
         if not points:
             print("Aucune donnée du LiDAR.")
             return None

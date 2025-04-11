@@ -20,11 +20,11 @@ class Pilote():
         gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche dirrection en sortie
 
         # Initialisation des broches GPIO
-        pwm = gpio.PWM(self.branch_moteur, 28)  # Fréquence de 28 Hz sur la branch_moteur
+        pwm = gpio.PWM(self.branch_moteur, 50)  # Fréquence de 50 Hz sur la branch_moteur
         pwm.start(0)
         self.pwm = pwm
 
-        dir = gpio.PWM(self.branch_direction, 28) # Fréquence de 28 Hz sur la branch_direction
+        dir = gpio.PWM(self.branch_direction, 50) # Fréquence de 50 Hz sur la branch_direction
         dir.start(0)
         self.dir = dir
 
@@ -34,7 +34,7 @@ class Pilote():
         self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
         rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
         Pilote.genererSignalPWM(self, 0, rapportCyclique)
-        # print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") #print la vitesse après actualisation
+        # print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n") #print la vitesse après actualisation
 
         return 
 
@@ -50,6 +50,7 @@ class Pilote():
     def applyBrakes(self, entrer):
         if entrer == True:
             # print("Déclanchement des frein") #affiche le bon déclanchement des frein
+            self.pwm.ChangeDutyCycle(0)
             return True #True pour oui le frein est déclancher
         elif entrer == False:
             # print("Frein non enclanché") #affiche le non déclanchement des frein

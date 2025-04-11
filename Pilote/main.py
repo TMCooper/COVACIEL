@@ -35,6 +35,6 @@ def main():
         pass
 
 if __name__ == '__main__':
-    t = Thread(target=main)
-    # main()
-    t.start()
+    # t = Thread(target=main)
+    main()
+    # t.start()
