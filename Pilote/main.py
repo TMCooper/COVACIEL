@@ -11,15 +11,19 @@ def main():
         # print(f"Direction actuelle : {currentDirection}")
         while True:
             # Control_car_input = 0.3
-            Control_car_input = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ")
+            # Control_car_input = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ")
             Control_direction_input = input("Dans quel dirrection voulez vous allez (-1.0 / 1.0) ? : ")
             
-            Thread(target=pilote.adjustSpeed, args=(Control_car_input,)).start()
-            Thread(target=pilote.changeDirection, args=(Control_direction_input,)).start()
+            # vit = Thread(target=pilote.adjustSpeed, args=(Control_car_input,))
+            dir = Thread(target=pilote.changeDirection, args=(Control_direction_input,))
+            
+            # vit.start()
+            dir.start()
+
             # pilote.adjustSpeed(Control_car_input)
             # pilote.changeDirection(Control_direction_input)
             # sleep(1)
-        # currentSpeed = pilote.adjustSpeed()
+        # currentSpeed = pilote.getCurrentDirection()
         # print(f"Speed actuelle : {currentSpeed}")
         
         # pilote.getCurrentDirection()
@@ -28,6 +32,8 @@ def main():
         # pilote.applyBrakes(entrer)
 
     except KeyboardInterrupt:
+        pilote.stop()
+        gpio.cleanup()  # Nettoyer les GPIO
         print("\nArret du programme...\n")
     
     except ValueError:

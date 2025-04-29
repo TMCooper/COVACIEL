@@ -11,7 +11,7 @@ from Lidar.Lidar_table_nv.lidar_table import LidarKit
 
 class CarController:
     def __init__(self):
-        self.pilote = Pilote(0.15, 0.0, 11, 13)
+        self.pilote = Pilote(0.0, 0.0, 11, 15)
         self.camera = ColorDetector(num_frames=1)
         self.lidar = LidarKit("/dev/ttyS0", debug=True)  
         self.lidar.start()
@@ -77,12 +77,12 @@ class CarController:
 
             if direction == "left":
                 print("Obstacle à droite → tourner à gauche")
-                # self.pilote.adjustDirection(-1.0)
+                self.pilote.changeDirection(-1.0)
             elif direction == "right":
                 print("Obstacle à gauche → tourner à droite")
-                # self.pilote.adjustDirection(1.0)
-            # else:
-                # self.pilote.adjustDirection(0.0)
+                self.pilote.changeDirection(1.0)
+            else:
+                self.pilote.changeDirection(0.0)
 
             time.sleep(0.1)
 

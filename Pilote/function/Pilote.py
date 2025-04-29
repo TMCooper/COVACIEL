@@ -111,3 +111,8 @@ class Pilote():
         elif ID == 1:
             self.dir.ChangeDutyCycle(rapportCyclique)
         return
+    
+    def stop(self):
+        gpio.cleanup
+        self.dir.stop()
+        self.pwm.stop()
