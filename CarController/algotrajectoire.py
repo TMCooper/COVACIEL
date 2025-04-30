@@ -56,6 +56,7 @@ class CarController:
     def navigate(self):
         print("Démarrage de la navigation...")
         self.pilote.adjustSpeed(0.15)
+        last_direction = None  # Pour éviter d'envoyer la même commande en boucle
 
         while True:
             red_left, green_right = self.check_colors()
@@ -69,20 +70,23 @@ class CarController:
                 time.sleep(0.5)
                 self.pilote.adjustSpeed(0.15)
 
-            try:
+            try: 
                 direction = self.check_obstacles()
-            except Exception as e:
+            except Exception as e: 
                 print(f"Erreur lors de la vérification des obstacles : {e}")
                 direction = None
 
             if direction == "left":
-                print("Obstacle à droite → tourner à gauche")
-                self.pilote.changeDirection(-1.0)
+                new_direction = -1.0
             elif direction == "right":
-                print("Obstacle à gauche → tourner à droite")
-                self.pilote.changeDirection(1.0)
+                new_direction = 1.0
             else:
-                self.pilote.changeDirection(0.0)
+                new_direction = 0.0
+
+            if new_direction != last_direction:
+                print(f"Changement de direction : {new_direction}")
+                self.pilote.changeDirection(new_direction)
+                last_direction = new_direction
 
             time.sleep(0.1)
 
