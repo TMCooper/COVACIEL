@@ -10,7 +10,7 @@ GPIO.setup(servo_pin, GPIO.OUT)
 
 # Paramètres
 periode = 20e-3  # 20 ms (50 Hz)
-temps_haut = 1.22e-3  # 0.5 ms
+temps_haut = 1.38e-3  # 0.5 ms
 temps_bas = periode - temps_haut  # Temps bas
 rapport_cyclique = (temps_haut / periode) * 100
 

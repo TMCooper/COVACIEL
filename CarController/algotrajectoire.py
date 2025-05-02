@@ -56,7 +56,7 @@ class CarController:
     def navigate(self):
         print("Démarrage de la navigation...")
         self.pilote.adjustSpeed(0.15)
-        last_direction = None  # Pour éviter d'envoyer la même commande en boucle
+        last_direction = None  
 
         while True:
             red_left, green_right = self.check_colors()
