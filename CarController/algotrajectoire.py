@@ -3,18 +3,22 @@ import os
 import sys
 import numpy as np
 
+ 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+ 
 from Pilote.function.Pilote import Pilote
 from Camera.class_array import ColorDetector
 from Lidar.Lidar_table_nv.lidar_table import LidarKit  
 
-class CarController:
+ 
+class CarController: 
     def __init__(self):
-        self.pilote = Pilote(0.0, 0.0, 11, 15)
+        self.pilote = Pilote(0.0, 0.0, 11, 13)
         self.camera = ColorDetector(num_frames=1)
         self.lidar = LidarKit("/dev/ttyS0", debug=True)  
         self.lidar.start()
+        print("Lidar démarré.")
 
     def check_colors(self):
         self.camera.run_detection()
@@ -33,6 +37,7 @@ class CarController:
 
     def check_obstacles(self):
         points = self.lidar.get_points()
+        print(f" {len(points)} points reçus du LiDAR")
         if not points:
             print("Aucune donnée du LiDAR.")
             return None
@@ -55,41 +60,39 @@ class CarController:
 
     def navigate(self):
         print("Démarrage de la navigation...")
-        self.pilote.adjustSpeed(0.15)
-        last_direction = None  
+        self.pilote.adjustSpeed(0.25)
 
         while True:
             red_left, green_right = self.check_colors()
 
+ 
             if red_left and green_right:
                 print("Couleurs correctes")
-                self.pilote.adjustSpeed(0.15)
+                self.pilote.adjustSpeed(0.25)
             else:
                 print("Couleurs incorrectes, demi-tour.")
-                self.pilote.adjustSpeed(0.15)
+                self.pilote.adjustSpeed(-1)
                 time.sleep(0.5)
-                self.pilote.adjustSpeed(0.15)
+                self.pilote.adjustSpeed(0.25)
 
-            try: 
+ 
+            try:
                 direction = self.check_obstacles()
-            except Exception as e: 
+            except Exception as e:
                 print(f"Erreur lors de la vérification des obstacles : {e}")
                 direction = None
-
+ 
             if direction == "left":
-                new_direction = -1.0
+                print("Obstacle à droite → tourner à gauche")
+                # self.pilote.adjustDirection(-1.0)
             elif direction == "right":
-                new_direction = 1.0
-            else:
-                new_direction = 0.0
-
-            if new_direction != last_direction:
-                print(f"Changement de direction : {new_direction}")
-                self.pilote.changeDirection(new_direction)
-                last_direction = new_direction
-
+                print("Obstacle à gauche → tourner à droite")
+                # self.pilote.adjustDirection(1.0)
+            # else:
+                # self.pilote.adjustDirection(0.0)
+ 
             time.sleep(0.1)
-
+ 
 if __name__ == "__main__":
     car = CarController()
     car.navigate()

@@ -1,4 +1,5 @@
 import RPi.GPIO as gpio
+import threading
 
 class Pilote():
     speed = float
@@ -13,6 +14,7 @@ class Pilote():
         self.direction = direction
         self.branch_moteur = branch_moteur
         self.branch_direction = branch_direction
+        
 
         # Définir le mode de numérotation des broches
         gpio.setmode(gpio.BOARD)
@@ -31,8 +33,10 @@ class Pilote():
         dir.start(0)
         self.dir = dir
 
+        # print(type(self.lock))
+
     def adjustSpeed(self, Control_car_input):
-          
+
         self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
         rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
         Pilote.genererSignalPWM(self, 0, rapportCyclique)
