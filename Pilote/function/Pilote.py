@@ -1,6 +1,10 @@
 import RPi.GPIO as gpio
 import threading
 
+Control_car_input = 0
+Control_direction_input = 0
+running = True
+
 class Pilote():
     speed = float
     direction = float
@@ -14,7 +18,8 @@ class Pilote():
         self.direction = direction
         self.branch_moteur = branch_moteur
         self.branch_direction = branch_direction
-        
+        self.lock = threading.Lock()
+
 
         # Définir le mode de numérotation des broches
         gpio.setmode(gpio.BOARD)
@@ -35,21 +40,37 @@ class Pilote():
 
         # print(type(self.lock))
 
-    def adjustSpeed(self, Control_car_input):
+    def adjustSpeed(self):
+        global Control_car_input
 
-        self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
-        rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
-        Pilote.genererSignalPWM(self, 0, rapportCyclique)
+        while running:
+            self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
+            rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
+            Pilote.genererSignalPWM(self, 0, rapportCyclique)
 
-        return 
+        return
+    
+    def UpdateControlCar(self, new_value):
+        global Control_car_input
+    
+        with self.lock:
+            Control_car_input = new_value
 
-    def changeDirection(self, Control_direction_input):
+    def changeDirection(self):
+        global Control_direction_input
 
-        self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste la direction
-        rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Converti la direction entre -1.0 et 1.0
-        Pilote.genererSignalPWM(self, 1, rapportCyclique) # Ecriture de l'angle sur le servo moteur
+        while running:
+            self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste la direction
+            rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Converti la direction entre -1.0 et 1.0
+            Pilote.genererSignalPWM(self, 1, rapportCyclique) # Ecriture de l'angle sur le servo moteur
         
         return
+
+    def UpdateDirectionCar(self, new_value):
+        global Control_direction_input
+
+        with self.lock:
+            Control_direction_input = new_value
     
     def applyBrakes(self, entrer):
         if entrer == True:
@@ -109,8 +130,10 @@ class Pilote():
         elif ID == 1:
             self.dir.ChangeDutyCycle(rapportCyclique)
         return
+
     
     def stop(self):
+        global running ; running = False
         gpio.cleanup
         self.dir.stop()
         self.pwm.stop()
