@@ -43,14 +43,16 @@ class CarController:
             return None
 
         # Filtrer les points pour les angles de 90° et 270°
-        left = [p for p in points if 80 <= p.angle <= 100]  # Autour de 90°
-        right = [p for p in points if 260 <= p.angle <= 280]  # Autour de 270°
+        left = [p for p in points if 85 <= p.angle <= 95]  # Autour de 90°
+        right = [p for p in points if 265 <= p.angle <= 275]  # Autour de 270°
 
-        left_avg = sum(p.distance for p in left) / len(left) if left else float('inf')
-        right_avg = sum(p.distance for p in right) / len(right) if right else float('inf')
+        obstacle_left = any(p.distance for p in left)
+        obstacle_right = any(p.distance for p in right)
 
-        if left_avg < 0.3 or right_avg < 0.3:
-            return "left" if left_avg > right_avg else "right"
+        if obstacle_left: 
+            return "right"
+        elif obstacle_right:
+            return "left"
         return "clear"
 
     def turn_around(self):
