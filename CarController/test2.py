@@ -70,8 +70,8 @@ class CarController:
     def avoid_obstacle(self, direction):
         """Evitement d’un obstacle à gauche ou à droite."""
         print(f"Obstacle détecté. Évitement vers {direction}.")
-        self.pilot.UpdateControlCar(0.20)
-        self.pilot.UpdateDirectionCar(-1 if direction=="left" else 1)
+        self.pilot.UpdateControlCar(0.13)
+        self.pilot.UpdateDirectionCar(1 if direction=="left" else -1)
         time.sleep(0.6)
         self.pilot.UpdateDirectionCar(0.0)
 

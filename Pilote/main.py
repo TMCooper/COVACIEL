@@ -1,17 +1,10 @@
 from function.Pilote import *
-from threading import Thread
 
 def main():
     try :        
         pilote = Pilote(0.0, 0.0, 32, 33) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float ainsi que les pin utiliser donc 32 pour le moteur et 33 pour la direction
-        
-        vit = Thread(target=pilote.adjustSpeed)
-        dir = Thread(target=pilote.changeDirection)
 
-        vit.start()
-        dir.start()
-
-        print(threading.enumerate())
+        # print(threading.enumerate())
 
         while True:
 
@@ -21,19 +14,14 @@ def main():
             pilote.UpdateControlCar(Control_car_input)
             pilote.UpdateDirectionCar(Control_direction_input)
 
-    except KeyboardInterrupt or RuntimeError:
+            # print(f"Direction actuelle :{pilote.getCurrentDirection()}")
+            # print(f"Vitesse actuelle :{pilote.getCurrentSpeed()}")
+            # pilote.applyBrakes(True)
+
+    except KeyboardInterrupt or RuntimeError or ValueError:
         pilote.stop()
-        vit.join()
-        dir.join()
         gpio.cleanup()  # Nettoyer les GPIO
         print("\nArret du programme...\n")
-
-    except ValueError:
-        pilote.stop()
-        vit.join()
-        dir.join()
-        gpio.cleanup()
-        print("Mauvaise input..")
 
 if __name__ == '__main__':
     main()

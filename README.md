@@ -1,8 +1,10 @@
 <h1 align="center">REPO COVACIEL</h1>
 
 <div align="left">
- </div>
- <div align="right">
+  <img align="left" src="https://i.imgur.com/fXYKU5q.png" alt="Logo" height="100">
+</div>
+<div align="right">
+  <img src="./images/TMCooper_moon.gif" alt="Logo" height="100" width="100">
 </div>
 <div align="center">
   <picture>
