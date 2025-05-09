@@ -93,11 +93,25 @@ class ColorDetector:
         self.picam2.stop()
         print("Caméra arrêtée.")
 
+    def __del__(self):
+        try:
+            self.picam2.stop()
+        except:
+            pass
+
+
+
+
 # --- Exécution ---
 if __name__ == "__main__":
-    detector = ColorDetector(num_frames=10)
     try:
+        detector = ColorDetector()
         detector.run_detection()
-        detector.save_results('out.csv')
+        detector.save_results()
+    except KeyboardInterrupt:
+        print("Interruption par l'utilisateur.")
     finally:
-        detector.cleanup()
+        if 'detector' in locals():
+            detector.picam2.stop()
+            print("Caméra correctement libérée.")
+

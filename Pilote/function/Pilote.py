@@ -1,4 +1,9 @@
 import RPi.GPIO as gpio
+import threading
+
+Control_car_input = 0
+Control_direction_input = 0
+running = True
 
 class Pilote():
     speed = float
@@ -13,60 +18,74 @@ class Pilote():
         self.direction = direction
         self.branch_moteur = branch_moteur
         self.branch_direction = branch_direction
+        self.lock = threading.Lock()
+
 
         # Définir le mode de numérotation des broches
         gpio.setmode(gpio.BOARD)
+
+        # Definition des broche utiliser pour le moteur et la direction
         gpio.setup(self.branch_moteur, gpio.OUT)  # Configuration de la branche moteur en sortie
         gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche dirrection en sortie
 
-        # Initialisation des broches GPIO
-        pwm = gpio.PWM(self.branch_moteur, 50)  # Fréquence de 50 Hz sur la branch_moteur
+        # Initialisation de la broche moteur
+        pwm = gpio.PWM(self.branch_moteur, 50)  # Fréquence de 50 Hz sur la branch moteur
         pwm.start(0)
         self.pwm = pwm
 
-        dir = gpio.PWM(self.branch_direction, 50) # Fréquence de 50 Hz sur la branch_direction
+        # Initialisation de la broche direction 
+        dir = gpio.PWM(self.branch_direction, 50) # Fréquence de 50 Hz sur la branch direction
         dir.start(0)
         self.dir = dir
 
-    def adjustSpeed(self, Control_car_input):
-        # Faire un system de com entre le raspi et le resultat de notre decision
-        
-        self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
-        rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
-        Pilote.genererSignalPWM(self, 0, rapportCyclique)
-        # print(f"Ajustement de speed a : {self.speed} \n Rapport cyclique : {rapportCyclique}%\n") #print la vitesse après actualisation
+        # print(type(self.lock))
 
-        return 
+    def adjustSpeed(self):
+        global Control_car_input
 
-    def changeDirection(self, Control_direction_input):
+        while running:
+            self.speed = Pilote.verificationEntrer(Control_car_input) #Ajuste la valeur de la vitesses entre -1.0 et 1.0
+            rapportCyclique = Pilote.calculerRapportCyclique(self, 0)
+            Pilote.genererSignalPWM(self, 0, rapportCyclique)
 
-        self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste la direction
-        rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Converti la direction entre -1.0 et 1.0
-        Pilote.genererSignalPWM(self, 1, rapportCyclique) # Ecriture de l'angle sur le servo moteur
-        # print(f"Ajustement de direction a : {self.direction} \n Rapport cyclique : {rapportCyclique}%\n Temps haut : {temps_haut}") # Print la direction après ajustement
+        return
+    
+    def UpdateControlCar(self, new_value):
+        global Control_car_input
+    
+        with self.lock:
+            Control_car_input = new_value
+
+    def changeDirection(self):
+        global Control_direction_input
+
+        while running:
+            self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste la direction
+            rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Converti la direction entre -1.0 et 1.0
+            Pilote.genererSignalPWM(self, 1, rapportCyclique) # Ecriture de l'angle sur le servo moteur
         
         return
+
+    def UpdateDirectionCar(self, new_value):
+        global Control_direction_input
+
+        with self.lock:
+            Control_direction_input = new_value
     
     def applyBrakes(self, entrer):
         if entrer == True:
-            # print("Déclanchement des frein") #affiche le bon déclanchement des frein
             self.pwm.ChangeDutyCycle(0)
             return True #True pour oui le frein est déclancher
         elif entrer == False:
-            # print("Frein non enclanché") #affiche le non déclanchement des frein
             return False
     
     def getCurrentSpeed(self):
-        # self.pwm.
-        # print(f"Valeur actuelle de speed : {self.speed}") #affiche directement la valeur de speed
         return self.speed #retourne la valeur de speed 
     
     def getCurrentDirection(self):
-        # print(f"Valeur actuelle de la direction prise : {self.direction}") # affiche directement la valeur de la direction
         return self.direction # retourne la valeur de la dirrection
     
     def verificationEntrer(Control_car_input):
-        # new_speed = input("A quel vitesses voulez vous ajuter le moteur (-1.0 / 1.0) : ") # Demande a l'utilisateur la nouvelle valeur de new_speed convenue entre -1.0 et 1.0 
         new_speed = float(Control_car_input) # Convertie la valeur choisit en float pour la conparaison
         if new_speed <= 1.0 and new_speed >= -1.0: # Compare la variable new_speed pour quel sois obligatoirement entre -1.0 et 1.0 
             return new_speed #si c'est oui alors on envoie directement la valeur
@@ -95,7 +114,7 @@ class Pilote():
             direction = self.direction
 
             # Calcul du rapport cyclique basé sur la direction
-            if direction == 0:
+            if direction == 0: 
                 temps_haut_direction = 1.38e-3  # Temps haut de 1.38 ms
             elif direction == 1:
                 temps_haut_direction = 1.54e-3  # Temps haut de 1.54 ms
@@ -111,3 +130,10 @@ class Pilote():
         elif ID == 1:
             self.dir.ChangeDutyCycle(rapportCyclique)
         return
+
+    
+    def stop(self):
+        global running ; running = False
+        gpio.cleanup
+        self.dir.stop()
+        self.pwm.stop()

@@ -1,30 +1,21 @@
 import RPi.GPIO as GPIO
 import time
 
-GPIO.setmode(GPIO.BCM)  # Utilise le numéro GPIO (ex : 22)
-GPIO.setup(22, GPIO.OUT)  # GPIO 22 = pin physique 15
+servo_pin = 15  # Assurez-vous que c'est la bonne broche
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(servo_pin, GPIO.OUT)
 
-pwm = GPIO.PWM(22, 50)  # 50 Hz
-pwm.start(0)
-
-def set_angle(angle):
-    duty = 2.5 + (angle / 18)
-    pwm.ChangeDutyCycle(duty)
+pwm = GPIO.PWM(servo_pin, 50)  # Fréquence de 50 Hz
+pwm.start(7.5)  # Duty cycle pour la position centrale (environ 90 degrés)
 
 try:
     while True:
-        print("Centre")
-        set_angle(90)
+        pwm.ChangeDutyCycle(5)  # Positionner à environ 0 degré
         time.sleep(1)
-
-        print("Droite")
-        set_angle(140)
+        pwm.ChangeDutyCycle(7.5)  # Positionner à environ 90 degrés
         time.sleep(1)
-
-        print("Gauche")
-        set_angle(40)
+        pwm.ChangeDutyCycle(10)  # Positionner à environ 180 degrés
         time.sleep(1)
-
 except KeyboardInterrupt:
     pwm.stop()
     GPIO.cleanup()

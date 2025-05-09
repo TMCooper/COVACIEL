@@ -14,7 +14,7 @@ broche_pwm = 17  # Utiliser la broche GPIO correspondant au numéro BCM (ici GPI
 pwm = PWMOutputDevice(broche_pwm)
 
 # Fréquence PWM (50 Hz)
-pwm.frequency = 28.03
+pwm.frequency = 50
 
 # Démarrer avec le bon duty cycle
 pwm.value = rapport_cyclique / 100  # Duty cycle entre 0 (off) et 1 (maximum)

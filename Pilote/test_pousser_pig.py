@@ -20,7 +20,7 @@ if not pi.connected:
 pi.set_mode(broche_pwm, pigpio.OUTPUT)
 
 # Fréquence PWM (28 Hz)
-pi.set_PWM_frequency(broche_pwm, 28)
+pi.set_PWM_frequency(broche_pwm, 50)
 
 # Résolution PWM (8 bits par défaut, ici on peut l'ajuster à la plage de 0 à 255)
 pi.set_PWM_range(broche_pwm, 255)
