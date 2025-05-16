@@ -28,13 +28,18 @@ class CarController:
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         red_left_pct, green_right_pct, _ = self.camera.process_frame(frame)
 
-        left_color = "red" if red_left_pct > 5 else "none"
-        right_color = "green" if green_right_pct > 5 else "none"
+        print(f"Rouge gauche : {red_left_pct:.1f} % | Vert droite : {green_right_pct:.1f} %")
 
-        if left_color == "red" and right_color == "green":
+        # Si au moins une couleur est bien présente, on continue
+        if red_left_pct > 5 and green_right_pct > 5:
             return "correct"
+        elif red_left_pct > 10 and green_right_pct < 3:
+            return "turn_right"  # Peut-être un virage à droite
+        elif green_right_pct > 10 and red_left_pct < 3:
+            return "turn_left"  # Peut-être un virage à gauche
         else:
             return "incorrect"
+
 
     def check_obstacles(self):
         """Analyse les données du LiDAR et retourne l'état de la trajectoire"""
@@ -43,17 +48,31 @@ class CarController:
             return None
 
         # Filtrer les points pour les angles de 90° et 270°
-        left = [p for p in points if 85 <= p.angle <= 95]  # Autour de 90°
-        right = [p for p in points if 265 <= p.angle <= 275]  # Autour de 270°
+        left_points = [p for p in points if 85 <= p.angle <= 95]  # Autour de 90°
+        right_points = [p for p in points if 265 <= p.angle <= 275]  # Autour de 270°
+        front_points = [p for p in points if p.angle <= 5 or p.angle >= 355]
 
-        obstacle_left = any(p.distance for p in left)
-        obstacle_right = any(p.distance for p in right)
+        front_distances = [p.distance for p in front_points]
+        left_distances = [p.distance for p in left_points]
+        right_distances = [p.distance for p in right_points]
 
-        if obstacle_left: 
+        if front_distances and min(front_distances) < 30:
+            avg_left = sum(left_distances) / len(left_distances) if left_distances else 0
+            avg_right = sum(right_distances) / len(right_distances) if right_distances else 0
+
+            if avg_left > avg_right:
+                return "turn_left"
+            else:
+                return "turn_right"
+        
+        if left_distances and min(left_distances) < 30:
             return "right"
-        elif obstacle_right:
+        elif right_distances and min(right_distances) < 30:
             return "left"
+        
         return "clear"
+
+
 
     def turn_around(self):
         """Effectue un demi-tour si la détection couleur est mauvaise"""
@@ -80,17 +99,26 @@ class CarController:
         """Boucle principale de conduite autonome"""
         try:
             while True:
-                color_status = self.get_color_status()
-                if color_status == "incorrect":
-                    self.turn_around()
-                    continue
-
                 obstacle_status = self.check_obstacles()
-                if obstacle_status == "clear":
-                    self.pilot.UpdateControlCar(0.13)
-                    self.pilot.UpdateDirectionCar(0.0)
-                elif obstacle_status in ("left", "right"):
+
+                if obstacle_status == "turn_left":
+                    self.avoid_obstacle("left")
+                    continue
+                elif obstacle_status == "turn_right":
+                    self.avoid_obstacle("right")
+                    continue
+                elif obstacle_status == "left" or obstacle_status == "right":
                     self.avoid_obstacle(obstacle_status)
+                    continue
+                elif obstacle_status == "clear":
+                    # On ne vérifie les couleurs que si la voie est libre
+                    color_status = self.get_color_status()
+                    if color_status == "incorrect":
+                        self.turn_around()
+                        continue
+                    else:
+                        self.pilot.UpdateControlCar(0.13)
+                        self.pilot.UpdateDirectionCar(0.0)
                 else:
                     self.pilot.UpdateControlCar(0.0)
                     print("Aucune donnée LIDAR")
