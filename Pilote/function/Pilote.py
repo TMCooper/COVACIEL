@@ -164,7 +164,6 @@ class Pilote():
         # Génère un signial pwm pour le la direction si l'ID est 1
         elif ID == 1:
             self.dir.ChangeDutyCycle(rapportCyclique)
-        return
     
     def stop(self):
         """Effectue un arret propre des thread ainsi qu'un nettoyage du gpio"""

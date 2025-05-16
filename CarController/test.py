@@ -31,11 +31,11 @@ class CarController:
         print(f"Rouge gauche : {red_left_pct:.1f} % | Vert droite : {green_right_pct:.1f} %")
 
         # Si au moins une couleur est bien présente, on continue
-        if red_left_pct > 5 and green_right_pct > 5:
+        if red_left_pct > 3 and green_right_pct > 3:
             return "correct"
-        elif red_left_pct > 10 and green_right_pct < 3:
+        elif red_left_pct > 25 and green_right_pct < 3:
             return "turn_right"  # Peut-être un virage à droite
-        elif green_right_pct > 10 and red_left_pct < 3:
+        elif green_right_pct > 25 and red_left_pct < 3:
             return "turn_left"  # Peut-être un virage à gauche
         else:
             return "incorrect"
@@ -48,31 +48,15 @@ class CarController:
             return None
 
         # Filtrer les points pour les angles de 90° et 270°
-        left_points = [p for p in points if 85 <= p.angle <= 95]  # Autour de 90°
-        right_points = [p for p in points if 265 <= p.angle <= 275]  # Autour de 270°
-        front_points = [p for p in points if p.angle <= 5 or p.angle >= 355]
+        left = [p.distance for p in points if 85 <= p.angle <= 95]  # Autour de 90°
+        right = [p.distance for p in points if 265 <= p.angle <= 275]  # Autour de 270°
+        front = [p.distance for p in points if p.angle <= 5 or p.angle >= 355]
 
-        front_distances = [p.distance for p in front_points]
-        left_distances = [p.distance for p in left_points]
-        right_distances = [p.distance for p in right_points]
+        avg_left = sum(left) / len(left) if left else 0
+        avg_right = sum(right) / len(right) if right else 0
+        min_front = min(front) if front else 999
 
-        if front_distances and min(front_distances) < 30:
-            avg_left = sum(left_distances) / len(left_distances) if left_distances else 0
-            avg_right = sum(right_distances) / len(right_distances) if right_distances else 0
-
-            if avg_left > avg_right:
-                return "turn_left"
-            else:
-                return "turn_right"
-        
-        if left_distances and min(left_distances) < 30:
-            return "right"
-        elif right_distances and min(right_distances) < 30:
-            return "left"
-        
-        return "clear"
-
-
+        return min_front, avg_left, avg_right
 
     def turn_around(self):
         """Effectue un demi-tour si la détection couleur est mauvaise"""
@@ -90,43 +74,81 @@ class CarController:
         self.pilot.UpdateControlCar(0.13)
         if direction == "left":
             self.pilot.UpdateDirectionCar(-1.0)
-        elif direction == "right":
+        else:
             self.pilot.UpdateDirectionCar(1.0)
         time.sleep(0.6)
+
         self.pilot.UpdateDirectionCar(0.0)
+        time.sleep(0.5)
 
     def drive(self):
-        """Boucle principale de conduite autonome"""
         try:
             while True:
-                obstacle_status = self.check_obstacles()
-
-                if obstacle_status == "turn_left":
-                    self.avoid_obstacle("left")
+                color_status = self.get_color_status()
+                check = self.check_obstacles()
+                if check is None:
+                    print("Aucune donnée LIDAR")
+                    self.pilot.UpdateControlCar(0.0)
+                    time.sleep(0.1)
                     continue
-                elif obstacle_status == "turn_right":
+
+                min_front, avg_left, avg_right = check
+
+                print(f"[DEBUG] Front min: {min_front:.1f} cm | Left avg: {avg_left:.1f} cm | Right avg: {avg_right:.1f} cm")
+
+                # 1. SÉCURITÉ : obstacle trop proche devant (< 10 cm)
+                if min_front < 10:
+                    print("⚠️ Obstacle critique très proche ! Recul en urgence.")
+                    self.pilot.UpdateControlCar(-1.0)
+                    time.sleep(0.4)
+                    self.pilot.UpdateControlCar(0.0)
+                    continue
+
+                # 2. PRIORITÉ : virages couleur
+                if color_status == "turn_right":
+                    print("🟢 Virage à droite détecté")
+                    self.pilot.UpdateControlCar(0.13)
+                    self.pilot.UpdateDirectionCar(1.0)
+                    time.sleep(0.4)
+                    continue
+
+                elif color_status == "turn_left":
+                    print("🔴 Virage à gauche détecté")
+                    self.pilot.UpdateControlCar(0.13)
+                    self.pilot.UpdateDirectionCar(-1.0)
+                    time.sleep(0.4)
+                    continue
+
+                # 3. OBSTACLE (mais pas en virage couleur)
+                if min_front < 50:
+                    print(f"🚧 Obstacle devant à {min_front:.1f} cm")
+                    if avg_left > avg_right:
+                        self.avoid_obstacle("left")
+                    else:
+                        self.avoid_obstacle("right")
+                    continue
+
+                elif avg_left < 35:
                     self.avoid_obstacle("right")
                     continue
-                elif obstacle_status == "left" or obstacle_status == "right":
-                    self.avoid_obstacle(obstacle_status)
+                elif avg_right < 35:
+                    self.avoid_obstacle("left")
                     continue
-                elif obstacle_status == "clear":
-                    # On ne vérifie les couleurs que si la voie est libre
-                    color_status = self.get_color_status()
-                    if color_status == "incorrect":
-                        self.turn_around()
-                        continue
-                    else:
-                        self.pilot.UpdateControlCar(0.13)
-                        self.pilot.UpdateDirectionCar(0.0)
+
+                # 4. TOUT EST OK
+                elif color_status == "correct":
+                    self.pilot.UpdateControlCar(0.13)
+                    self.pilot.UpdateDirectionCar(0.0)
+
+                # 5. Problème couleur
                 else:
-                    self.pilot.UpdateControlCar(0.0)
-                    print("Aucune donnée LIDAR")
+                    self.turn_around()
 
                 time.sleep(0.1)
 
         except KeyboardInterrupt:
             self.stop()
+
 
     def stop(self):
         """Arrête le contrôleur et nettoie les ressources"""
