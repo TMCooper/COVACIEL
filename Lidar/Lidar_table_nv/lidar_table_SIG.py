@@ -41,7 +41,7 @@ class LidarKit:
         self.running = False
         self.thread = None
 
-        # Liste de points récents (optionnel)
+        # Liste de points récents 
         self.points = []
 
         # Tableau angle→distance (0–359) en mm
