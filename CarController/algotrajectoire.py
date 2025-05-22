@@ -1,115 +1,130 @@
-import time
-import os
 import sys
-import RPi.GPIO as gpio
-import numpy as np
-import cv2
-import RPi.GPIO as gpio
-
-
-# Ajoute le chemin parent au sys.path
+import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from Camera.test_capture_color import ColorDetector
 from Pilote.function.Pilote import Pilote
 from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
 
+import time
+import RPi.GPIO as gpio
+import numpy as np
 
 class CarController:
     def __init__(self):
-        self.camera = ColorDetector()
         self.lidar = LidarKit("/dev/ttyS0", debug=True)
         self.pilot = Pilote(0.0, 0.0, 32, 33)
         self.lidar.start()
 
-    def get_color_status(self):
-        """Analyse les couleurs détectées et retourne un état"""
-        frame = self.camera.picam2.capture_array()
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        red_left_pct, green_right_pct, _ = self.camera.process_frame(frame)
-
-        left_color = "red" if red_left_pct > 5 else "none"
-        right_color = "green" if green_right_pct > 5 else "none"
-
-        if left_color == "red" and right_color == "green":
-            return "correct"
-        else:
-            return "incorrect"
-
-    def adjust_to_center(self):
-        """Ajuste la direction pour rester au centre de la piste"""
+    def check_obstacles(self):
+        """Utilise les angles clés : 0 (devant), 30, 90 (gauche), 270 (droite), 330."""
         points = self.lidar.get_points()
         if not points:
             return None
 
-    # Sélectionne les points dans une zone large autour de 90° (droite) et 270° (gauche)
-        left = [p for p in points if 265 <= p.angle <= 275]
-        right = [p for p in points if 85 <= p.angle <= 95]
+        angle_dist = {0: None, 30: None, 90: None, 270: None, 330: None}
 
-        if len(left) < 3 or len(right) < 3:
-            print("Données insuffisantes du LiDAR à gauche/droite")
-            self.pilot.UpdateDirectionCar(0.0)
-            return
+        for p in points:
+            angle = round(p["angle"])  # ✅ dictionnaire, pas attribut
+            if angle in angle_dist:
+                if angle_dist[angle] is None:
+                    angle_dist[angle] = p["distance"]
+                else:
+                    angle_dist[angle] = min(angle_dist[angle], p["distance"])
 
-        avg_left = sum(left) / len(left)
-        avg_right = sum(right) / len(right)
-        diff = avg_right - avg_left
+    # Valeurs par défaut si aucun point
+        center = angle_dist[0] if angle_dist[0] is not None else 999.0
+        left = angle_dist[90] if angle_dist[90] is not None else 999.0
+        right = angle_dist[270] if angle_dist[270] is not None else 999.0
+        front_left = angle_dist[30] if angle_dist[30] is not None else 999.0
+        front_right = angle_dist[330] if angle_dist[330] is not None else 999.0
 
-        print(f"Gauche: {avg_left:.1f} cm | Droite: {avg_right:.1f} cm | Diff: {diff:.1f} cm")
+        return left, right, front_left, front_right, center
 
-        if abs(diff) < 2:  # moins de 2 cm = centré
-            self.pilot.UpdateDirectionCar(0)
-        elif diff > 0:
-            self.pilot.UpdateDirectionCar(-1)  # Trop à gauche → tourner à droite
-        else:
-            self.pilot.UpdateDirectionCar(1)   # Trop à droite → tourner à gauche
-
-
-
-    def turn_around(self):
-        """Effectue un demi-tour si la détection couleur est mauvaise"""
-        print("Mauvaise couleur détectée. Demi-tour...")
-        self.pilot.UpdateControlCar(-1)
-        time.sleep(0.8)
-        self.pilot.UpdateDirectionCar(1)
-        time.sleep(1.2)
-        self.pilot.UpdateControlCar(0.0)
-        self.pilot.UpdateDirectionCar(0.0)
 
     def avoid_obstacle(self, direction):
-        """Évite un obstacle en changeant de direction momentanément"""
-        print(f"Obstacle détecté. Évitement vers {direction}.")
-        self.pilot.UpdateControlCar(0.13)
+        """Évite un obstacle en tournant légèrement."""
+        print(f"🔁 Obstacle devant → Évitement à {direction}")
+        self.pilot.UpdateControlCar(0.10)
         if direction == "left":
-            self.pilot.UpdateDirectionCar(1)
-        elif direction == "right":
-            self.pilot.UpdateDirectionCar(-1)
-        time.sleep(0.6)
+            self.pilot.UpdateDirectionCar(-1.0)
+        else:
+            self.pilot.UpdateDirectionCar(1.0)
+        time.sleep(0.5)
         self.pilot.UpdateDirectionCar(0.0)
+        time.sleep(0.3)
 
     def drive(self):
-        """Boucle principale de conduite autonome avec centrage LiDAR"""
         try:
             while True:
-                color_status = self.get_color_status()
-                if color_status == "incorrect":
-                    self.turn_around()
+                check = self.check_obstacles()
+                if check is None:
+                    print("⚠️ Aucune donnée LiDAR")
+                    self.pilot.UpdateControlCar(0.0)
+                    time.sleep(0.1)
                     continue
 
-                self.pilot.UpdateControlCar(0.13)
-                self.adjust_to_center()
+                left, right, front_left, front_right, center = check
+                front = min(front_left, front_right, center)
+
+                print(f"[LIDAR] Front: {front:.1f} cm | Left: {left:.1f} cm | Right: {right:.1f} cm")
+
+                # 🟥 Obstacle très proche devant : recule
+                if front < 0.20:
+                    print("🚨 Obstacle trop proche ! Recul...")
+                    self.pilot.UpdateControlCar(-1.0)
+                    time.sleep(0.4)
+                    self.pilot.UpdateControlCar(0.0)
+                    continue
+
+            # 🟧 Obstacle modéré devant : choisir le côté le plus ouvert
+                elif front < 0.35:
+                    print("🟠 Obstacle devant → évitement")
+                    self.pilot.UpdateControlCar(0.13)
+                    if left > right:
+                        self.pilot.UpdateDirectionCar(-1.0)  # Va à gauche
+                    else:
+                        self.pilot.UpdateDirectionCar(1.0)   # Va à droite
+                    time.sleep(0.4)
+                    self.pilot.UpdateDirectionCar(0.0)
+                    continue
+
+            # 🟨 Trop proche d’un mur à droite → va à gauche
+                elif right < 20:
+                    print("➡️ Trop à droite → correction vers la gauche")
+                    self.pilot.UpdateControlCar(0.13)
+                    self.pilot.UpdateDirectionCar(-1.0)
+                    time.sleep(0.3)
+                    self.pilot.UpdateDirectionCar(0.0)
+                    continue
+
+            # 🟨 Trop proche d’un mur à gauche → va à droite
+                elif left < 20:
+                    print("⬅️ Trop à gauche → correction vers la droite")
+                    self.pilot.UpdateControlCar(0.13)
+                    self.pilot.UpdateDirectionCar(1.0)
+                    time.sleep(0.3)
+                    self.pilot.UpdateDirectionCar(0.0)
+                    continue
+
+            # ✅ Route libre → tout droit
+                else:
+                    print("✅ Route libre → Avancer tout droit")
+                    self.pilot.UpdateControlCar(0.13)
+                    self.pilot.UpdateDirectionCar(0.0)
+
                 time.sleep(0.1)
 
         except KeyboardInterrupt:
             self.stop()
 
+
     def stop(self):
-        """Arrête le contrôleur et nettoie les ressources"""
+        """Arrête tous les composants proprement"""
         self.pilot.stop()
         self.lidar.stop()
-        self.camera.picam2.stop()
-        gpio.cleanup()  # Nettoyer les GPIO
-        print("Contrôleur arrêté.")
+        gpio.cleanup()
+        print("🛑 Contrôleur arrêté proprement.")
+
 
 if __name__ == "__main__":
     car = CarController()

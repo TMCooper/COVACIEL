@@ -1,47 +1,78 @@
-import random
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-class DummyLidar:
+from Pilote.function.Pilote import Pilote
+from Lidar.Lidar_table_nv.lidar_SIG import LidarKit
+
+import time
+import RPi.GPIO as gpio
+import numpy as np
+
+
+class CarController:
     def __init__(self):
-        # Simule des mesures sous la forme (angle, distance, confiance)
-        self.measurements = self._generate_fake_data()
+        self.pilote = Pilote(motor_pin=32, servo_pin=33)
+        self.lidar = LidarKit(port="/dev/ttyS0", baudrate=230400, debug=False)
+        self.lidar.start()
 
-    def _generate_fake_data(self):
-        data = []
-        for angle in range(360):
-            if angle == 90:
-                dist = random.randint(100, 800)  # obstacle à droite
-            elif angle == 270:
-                dist = random.randint(100, 800)  # obstacle à gauche
-            else:
-                dist = random.randint(500, 2000)
-            confidence = random.randint(0, 255)
-            data.append((angle, dist, confidence))
-        return data
+    def check_distances(self):
+        """Lit les distances à gauche (90°), droite (270°) et face (0°)"""
+        angle_map = self.lidar.get_angle_map()
 
-def check_obstacles(measurements):
-    distances = {90: None, 270: None}
-    for angle, dist, _ in measurements:
-        if angle == 90:
-            distances[90] = dist
-        elif angle == 270:
-            distances[270] = dist
+        def valid_cm(angle):
+            mm = angle_map[angle]
+            return mm / 10 if 20 < mm < 2000 else 999.0  # En cm, valeurs aberrantes ignorées
 
-    print(f"📏 Distance droite (90°): {distances[90]} mm")
-    print(f"📏 Distance gauche (270°): {distances[270]} mm")
+        left = valid_cm(90)
+        right = valid_cm(270)
+        front = valid_cm(0)
 
-    seuil = 300  # mm
+        return left, right, front
 
-    if distances[90] is not None and distances[90] < seuil:
-        print("🧱 Obstacle à droite → Aller à gauche")
-        return "left"
-    elif distances[270] is not None and distances[270] < seuil:
-        print("🧱 Obstacle à gauche → Aller à droite")
-        return "right"
-    
-    print("✅ Pas d'obstacle proche → Tout droit")
-    return "straight"
+    def run(self):
+        try:
+            while True:
+                left, right, front = self.check_distances()
+                print(f"[LIDAR] Left: {left:.1f} cm | Right: {right:.1f} cm | Front: {front:.1f} cm")
+
+                if front < 25:
+                    print("🛑 Obstacle en face → arrêt immédiat")
+                    self.pilote.adjustSpeed(0.0)
+                    self.pilote.changeDirection(0.0)
+
+                elif right < 30:
+                    print("➡️ Obstacle à droite → tourner à gauche")
+                    self.pilote.changeDirection(-0.5)
+                    self.pilote.adjustSpeed(0.3)
+
+                elif left < 30:
+                    print("⬅️ Obstacle à gauche → tourner à droite")
+                    self.pilote.changeDirection(0.5)
+                    self.pilote.adjustSpeed(0.3)
+
+                else:
+                    print("✅ Route libre → avancer tout droit")
+                    self.pilote.changeDirection(0.0)
+                    self.pilote.adjustSpeed(0.5)
+
+                time.sleep(0.1)
+
+        except KeyboardInterrupt:
+            print("Arrêt manuel du programme.")
+        finally:
+            self.lidar.stop()
+            self.pilote.adjustSpeed(0)
+            print("Système arrêté proprement.")
+
+
+    def stop(self):
+        self.pilot.stop()
+        self.lidar.stop()
+        gpio.cleanup()
+        print("🛑 Contrôleur arrêté proprement.")
+
 
 if __name__ == "__main__":
-    lidar = DummyLidar()
-    decision = check_obstacles(lidar.measurements)
-    print(f"🧭 Décision finale : {decision}")
+    car = CarController()
+    car.drive()

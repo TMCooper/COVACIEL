@@ -4,7 +4,6 @@ import sys
 import RPi.GPIO as gpio
 import numpy as np
 import cv2
-import RPi.GPIO as gpio
 
 
 # Ajoute le chemin parent au sys.path
@@ -97,37 +96,24 @@ class CarController:
                 print(f"[DEBUG] Front min: {min_front:.1f} cm | Left avg: {avg_left:.1f} cm | Right avg: {avg_right:.1f} cm")
 
                 # 1. SÉCURITÉ : obstacle trop proche devant (< 10 cm)
-                if min_front < 10:
+                if min_front < 0.10:
                     print("⚠️ Obstacle critique très proche ! Recul en urgence.")
                     self.pilot.UpdateControlCar(-1.0)
                     time.sleep(0.4)
                     self.pilot.UpdateControlCar(0.0)
                     continue
 
-                # 2. PRIORITÉ : virages couleur
-                if color_status == "turn_right":
-                    print("🟢 Virage à droite détecté")
-                    self.pilot.UpdateControlCar(0.13)
-                    self.pilot.UpdateDirectionCar(1.0)
-                    time.sleep(0.4)
-                    continue
-
-                elif color_status == "turn_left":
-                    print("🔴 Virage à gauche détecté")
-                    self.pilot.UpdateControlCar(0.13)
-                    self.pilot.UpdateDirectionCar(-1.0)
-                    time.sleep(0.4)
-                    continue
+               
 
                 # 3. OBSTACLE (mais pas en virage couleur)
-                if min_front < 50:
+                if min_front < 0.50:
                     print(f"🚧 Obstacle devant à {min_front:.1f} cm")
                     if avg_left > avg_right:
                         self.avoid_obstacle("left")
                     else:
                         self.avoid_obstacle("right")
                     continue
-
+                
                 elif avg_left < 35:
                     self.avoid_obstacle("right")
                     continue

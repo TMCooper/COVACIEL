@@ -56,12 +56,12 @@ class LidarOnlyNavigator:
                 front, left, right = lidar_data
                 print(f"[LIDAR] Front: {front:.1f} cm | Left: {left:.1f} cm | Right: {right:.1f} cm")
 
-                if front < 30:
-                    if left > right and left > 20:
+                if front < 0.50:
+                    if left > right and left > 10:
                         print("🔁 Obstacle devant → Évitement à gauche")
                         self.pilot.UpdateControlCar(0.13)
                         self.pilot.UpdateDirectionCar(-1.0)
-                    elif right >= left and right > 20:
+                    elif right >= left and right > 10:
                         print("🔁 Obstacle devant → Évitement à droite")
                         self.pilot.UpdateControlCar(0.13)
                         self.pilot.UpdateDirectionCar(1.0)

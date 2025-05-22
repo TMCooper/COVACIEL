@@ -55,6 +55,7 @@ class Pilote():
         self.dir_t.start()
 
     def adjustSpeed(self):
+        # Methode lu par le thread qui s'occupe d'ajuster en boucle la vitesses
         global Control_car_input
 
         while running:
@@ -73,6 +74,7 @@ class Pilote():
             Control_car_input = new_value
 
     def changeDirection(self):
+        # Methode lu par le thread qui s'occupe d'ajuster en boucle la direction
         global Control_direction_input
 
         while running:
