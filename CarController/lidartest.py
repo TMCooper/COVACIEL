@@ -8,7 +8,7 @@ import cv2
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from Pilote.function.Pilote import Pilote
-from Lidar.Lidar_table_nv.lidar import LidarKit
+from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
 
 class CarController:
     def __init__(self):
@@ -41,15 +41,20 @@ class CarController:
 
                 erreur = self.calculer_erreur_laterale(g, d)
                 direction = self.gain * erreur  # K * e
-                print(direction)
 
                 print(f"[LiDAR] G: {g} m | D: {d} m | e: {erreur:.2f} → Dir: {direction:.1f}")
 
-                # Assure-toi que changeDirection est appelée correctement
-                self.pilot.UpdateDirectionCar(direction)
+                # Assure-toi que la direction est ajustée correctement
+                if direction < 0:
+                    # Si la direction est négative, tourne à droite
+                    self.pilot.UpdateDirectionCar(1.0)
+                else:
+                    # Sinon, tourne à gauche
+                    self.pilot.UpdateDirectionCar(-1.0)
+
                 self.pilot.UpdateControlCar(self.vitesse_avance)
 
-                time.sleep(0.1)
+                time.sleep(0.1)  # Réduire le temps de sommeil pour diminuer la latence
 
         except KeyboardInterrupt:
             self.stop()

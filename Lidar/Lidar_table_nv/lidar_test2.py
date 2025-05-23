@@ -1,8 +1,8 @@
 import time
-from lidar import LidarKit  # Assure-toi que lidar.py est dans le même dossier
+from lidar_table_SIG import LidarKit  # Vérifie que lidar_table.py est bien le nom du fichier
 
 def main():
-    lidar = LidarKit(port="/dev/ttyS0", baudrate=230400, debug=False)  # Change le port si besoin
+    lidar = LidarKit(port="/dev/ttyS0", baudrate=230400, debug=False)
 
     try:
         print("Démarrage du LIDAR...")
@@ -10,10 +10,10 @@ def main():
         time.sleep(2)  # Laisse le temps au LIDAR de se stabiliser
 
         while True:
-            angle_map = lidar.get_angle_map()
+            distances = lidar.get_distance_at_angles([0, 90])
 
-            dist_0 = angle_map[0]
-            dist_90 = angle_map[90]
+            dist_0 = distances[0]
+            dist_90 = distances[1]
 
             if dist_0 > 0:
                 print(f"Angle 0°: {dist_0:.2f} m", end=' | ')

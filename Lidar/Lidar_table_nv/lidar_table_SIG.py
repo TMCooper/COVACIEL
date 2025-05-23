@@ -1,16 +1,16 @@
 import serial
 import threading
-from collections import namedtuple
+from dataclasses import dataclass
+from typing import List
+import RPi.GPIO as GPIO
 
-# Structure pour stocker un point LIDAR
-LidarPoint = namedtuple("LidarPoint", ["angle", "distance", "confidence", "timestamp"])
-
-# Constantes de protocole LD06
+# Constantes
 PACKET_LEN = 47
 NUM_POINTS = 12
-CONFIDENCE_THRESHOLD = 50  # Seuil minimal de confiance
+CONFIDENCE_THRESHOLD = 50
+PWM_GPIO = 12  # GPIO pour la commande PWM moteur (broche 12 / GPIO18)
 
-# Table CRC8 complète pour LD06
+# Table CRC
 CRC_TABLE = [
     0x00, 0x4d, 0x9a, 0xd7, 0x79, 0x34, 0xe3, 0xae, 0xf2, 0xbf, 0x68, 0x25, 0x8b, 0xc6, 0x11, 0x5c,
     0xa9, 0xe4, 0x33, 0x7e, 0xd0, 0x9d, 0x4a, 0x07, 0x5b, 0x16, 0xc1, 0x8c, 0x22, 0x6f, 0xb8, 0xf5,
@@ -30,8 +30,16 @@ CRC_TABLE = [
     0xf4, 0xb9, 0x6e, 0x23, 0x8d, 0xc0, 0x17, 0x5a, 0x06, 0x4b, 0x9c, 0xd1, 0x7f, 0x32, 0xe5, 0xa8
 ]
 
+
+@dataclass
+class LidarPoint:
+    angle: float
+    distance: float
+    confidence: int
+    timestamp: int
+
+
 class LidarKit:
-    """Gestion du LIDAR LD06 sans affichage graphique."""
     def __init__(self, port="/dev/ttyS0", baudrate=230400, debug=False):
         self.port = port
         self.baudrate = baudrate
@@ -41,91 +49,101 @@ class LidarKit:
         self.running = False
         self.thread = None
 
-        # Liste de points récents (optionnel)
-        self.points = []
-
-        # Tableau angle→distance (0–359) en mm
+        self.points: List[LidarPoint] = []
         self.angle_distance_map = [-1.0] * 360
-
-        # Verrou pour protéger les accès multi-threads
         self.lock = threading.Lock()
 
-    def open(self):
-        """Ouvre le port série."""
-        self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
+        # Init PWM
+        self.pwm_pin = PWM_GPIO
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(self.pwm_pin, GPIO.OUT)
+        self.pwm = GPIO.PWM(self.pwm_pin, 1000)  # 1 kHz
+        self.pwm.start(0)  # Duty cycle 0% au début
 
-    def close(self):
-        """Ferme le port série si ouvert."""
-        if self.ser and self.ser.is_open:
-            self.ser.close()
+    def _set_pwm_max(self):
+        """Configure le signal PWM à 100% (pleine puissance moteur)."""
+        self.pwm.ChangeDutyCycle(100)
+        if self.debug:
+            print("PWM réglé à 100 %")
 
-    def calc_crc8(self, data):
-        """CRC8 sur les 46 premiers octets."""
+    def _calc_crc(self, data: bytes) -> int:
         crc = 0
         for b in data[:46]:
             crc = CRC_TABLE[(crc ^ b) & 0xFF]
         return crc
 
+    def _parse_packet(self, raw: bytes) -> List[LidarPoint]:
+        if len(raw) != PACKET_LEN or self._calc_crc(raw) != raw[46]:
+            if self.debug:
+                print("CRC invalide")
+            return []
+
+        points = []
+        start_angle = int.from_bytes(raw[4:6], "little") / 100.0
+        end_angle = int.from_bytes(raw[42:44], "little") / 100.0
+        timestamp = int.from_bytes(raw[44:46], "little")
+        step = ((end_angle - start_angle + 360.0) % 360.0) / (NUM_POINTS - 1)
+
+        for i in range(NUM_POINTS):
+            offset = 6 + i * 3
+            dist = int.from_bytes(raw[offset:offset+2], "little") / 1000.0
+            conf = raw[offset + 2]
+            angle = (start_angle + i * step) % 360.0
+
+            if conf >= CONFIDENCE_THRESHOLD and dist > 0:
+                points.append(LidarPoint(angle, dist, conf, timestamp))
+        return points
+
+    def open(self):
+        self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
+
+    def close(self):
+        if self.ser and self.ser.is_open:
+            self.ser.close()
+
     def start(self):
-        """Démarre la lecture en thread."""
         if self.running:
             return False
         self.running = True
         self.open()
-        self.thread = threading.Thread(target=self.read_loop, daemon=True)
+        self._set_pwm_max()
+        self.thread = threading.Thread(target=self._read_loop, daemon=True)
         self.thread.start()
         return True
 
     def stop(self):
-        """Arrête la lecture et ferme le port."""
         self.running = False
         if self.thread:
             self.thread.join()
         self.close()
+        self.pwm.stop()
+        GPIO.cleanup()
 
     def get_points(self):
-        """Renvoie les points collectés (puis vide la liste)."""
         with self.lock:
             pts = self.points.copy()
             self.points.clear()
         return pts
 
     def get_angle_map(self):
-        """Renvoie une copie du tableau angle→distance (mm)."""
         with self.lock:
             return self.angle_distance_map.copy()
 
-    def read_loop(self):
-        """Boucle de lecture des paquets et mise à jour du tableau."""
+    def get_distance_at_angles(self, angles: List[int]) -> List[float]:
+        """Retourne les distances pour les angles donnés, -1.0 si pas de données."""
+        with self.lock:
+            return [self.angle_distance_map[a % 360] if 0 <= a < 360 else -1.0 for a in angles]
+
+    def _read_loop(self):
         while self.running:
-            # Synchronisation sur header 0x54
-            first = self.ser.read(1)
-            if not first or first[0] != 0x54:
+            header = self.ser.read(1)
+            if not header or header[0] != 0x54:
                 continue
-
-            # Lecture du paquet complet
-            pkt = bytearray([0x54]) + self.ser.read(PACKET_LEN - 1)
-            if len(pkt) != PACKET_LEN or self.calc_crc8(pkt) != pkt[46]:
-                if self.debug:
-                    print("CRC invalide, ignore")
-                continue
-
-            # Angles début/fin en centi-degrés → degrés
-            start_angle = int.from_bytes(pkt[4:6], "little") / 100.0
-            end_angle   = int.from_bytes(pkt[42:44], "little") / 100.0
-            timestamp   = int.from_bytes(pkt[44:46], "little")
-
-            # Pas angulaire entre les NUM_POINTS
-            step = ((end_angle - start_angle + 360.0) % 360.0) / (NUM_POINTS - 1)
+            raw = bytearray([0x54]) + self.ser.read(PACKET_LEN - 1)
+            new_points = self._parse_packet(raw)
 
             with self.lock:
-                for i in range(NUM_POINTS):
-                    j = 6 + 3 * i
-                    dist_m = int.from_bytes(pkt[j:j+2], "little") / 1000.0
-                    conf   = pkt[j+2]
-                    angle  = (start_angle + i * step) % 360.0
-
-                    if conf >= CONFIDENCE_THRESHOLD:
-                        idx = int(angle)  # 0–359
-                        self.angle_distance_map[idx] = dist_m * 1000.0
-                        self.points.append( LidarPoint(angle, dist_m, conf, timestamp) )
+                for pt in new_points:
+                    idx = int(pt.angle) % 360
+                    self.angle_distance_map[idx] = pt.distance
+                    self.points.append(pt)

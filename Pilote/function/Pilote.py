@@ -145,8 +145,7 @@ class Pilote():
         
         elif ID == 1:
             direction = self.direction
-
-            # Calcul du rapport cyclique pour la direction
+            
             if direction == 0: 
                 temps_haut_direction = 1.38e-3  # Temps haut de 1.38 ms
             elif direction == 1:
