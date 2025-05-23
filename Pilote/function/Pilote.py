@@ -6,6 +6,8 @@ Control_car_input = 0
 Control_direction_input = 0
 running = True
 
+#Borche fourche = 35
+
 class Pilote():
     """
     Classe représentant un véhicule ou un système motorisé avec les attributs suivants :
@@ -21,12 +23,15 @@ class Pilote():
     branch_moteur = int # Branche moteur
     branch_direction = int # Branche pour la direction
 
-    def __init__(self,speed, direction, branch_moteur, branch_direction): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
+    branch_fourche = int #Branche pour la fourche
+
+    def __init__(self,speed, direction, branch_moteur, branch_direction, branch_fourche): #Ajout de speed, direction, branch_moteur et branch_direction au "tableau" de self
         # Initialisation des differente variable essentiel
         self.speed = speed
         self.direction = direction
         self.branch_moteur = branch_moteur
         self.branch_direction = branch_direction
+        self.branch_fourche = branch_fourche
         self.lock = threading.Lock()
 
         # Création des thread de la class pilotte
@@ -39,6 +44,7 @@ class Pilote():
         # Definition des broche utiliser pour le moteur et la direction
         gpio.setup(self.branch_moteur, gpio.OUT)  # Configuration de la branche moteur en sortie
         gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche dirrection en sortie
+        gpio.setup(self.branch_fourche, gpio.IN, pull_up_down=gpio.PUD_UP) #Configuration de la branch fourche en entré
 
         # Initialisation de la broche moteur
         pwm = gpio.PWM(self.branch_moteur, 50)  # Fréquence de 50 Hz sur la branch moteur
@@ -59,7 +65,7 @@ class Pilote():
         global Control_car_input
 
         while running:
-            self.speed = Pilote.verificationEntrer(Control_car_input) # Ajuste la valeur de la vitesses entre -1.0 et 1.0
+            self.speed = Pilote.verificationEntrer(self, Control_car_input) # Ajuste la valeur de la vitesses entre -1.0 et 1.0
             rapportCyclique = Pilote.calculerRapportCyclique(self, 0) # Génère un rapport cyclique en fonction de self.speed
             Pilote.genererSignalPWM(self, 0, rapportCyclique) # Envoie le resultat du rapport cyclique a genererSignalPWM pour ajustement
 
@@ -78,7 +84,7 @@ class Pilote():
         global Control_direction_input
 
         while running:
-            self.direction = Pilote.verificationEntrer(Control_direction_input) # Ajuste de la vitesses pour la tenir entre -1 et 1
+            self.direction = Pilote.verificationEntrer(self, Control_direction_input) # Ajuste de la vitesses pour la tenir entre -1 et 1
             rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Génère un rapport cyclique en fonction de self.direction
             Pilote.genererSignalPWM(self, 1, rapportCyclique) # Envoie le resultat du rapport cyclique a genererSinalPWM pour ajustement
         
@@ -113,16 +119,13 @@ class Pilote():
         """Affiche la valeur actuelle de direction"""
         return self.direction # retourne la valeur de la dirrection (avec le thread un petit temps pour actialiser serait idéal)
     
-    def verificationEntrer(Control_car_input):
+    def verificationEntrer(self, Control_car_input):
         """Verifie l'entrer de l'utilisateur pour qu'il sois obligatoirement entre -1 et 1"""
         new_speed = float(Control_car_input) # Convertie la valeur choisit en float pour la conparaison
         if new_speed <= 1.0 and new_speed >= -1.0: # Compare la variable new_speed pour quel sois obligatoirement entre -1.0 et 1.0 
             return new_speed #si c'est oui alors on envoie directement la valeur
         else: 
-            while new_speed > 1.0 or new_speed < -1.0: # Si la valeur n'est pas bonne nous rentrons dans un while et t'en que la variable new_speed n'est pas entre -1.0 et 1.0 alors on demande a l'utilisateur de nouveau
-                new_speed = input("Erreur : La consigne doit être entre -1.0 et 1.0 : ") #redemande a l'utilisateur la valeur qu'il souhaite
-                new_speed = float(new_speed) # Convertie la valeur choisit en float pour la comparaison
-            return new_speed
+            return self.speed
 
     def calculerRapportCyclique(self, ID):
         """Effectue le calcule pour le rapport cyclique moteur et direction"""
@@ -176,3 +179,6 @@ class Pilote():
         self.pwm.stop()
         self.vit.join()
         self.dir_t.join()
+
+    def GetFourche(self):
+        print(gpio.input(self.branch_fourche))

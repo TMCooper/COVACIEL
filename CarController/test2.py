@@ -7,7 +7,7 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from Pilote.function.Pilote import Pilote
-from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
+from Lidar.Lidar_table_nv.lidar import LidarKit
 
 class LidarOnlyNavigator:
     def __init__(self):

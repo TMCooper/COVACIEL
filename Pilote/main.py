@@ -2,7 +2,7 @@ from function.Pilote import *
 
 def main():
     try :        
-        pilote = Pilote(0.0, 0.0, 32, 33) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float ainsi que les pin utiliser donc 32 pour le moteur et 33 pour la direction
+        pilote = Pilote(0.0, 0.0, 32, 33, 35) #defini les valeur par defaut a speed 0 et direction 0 les deux en type float ainsi que les pin utiliser donc 32 pour le moteur et 33 pour la direction
 
         # print(threading.enumerate())
 
@@ -13,7 +13,7 @@ def main():
             
             pilote.UpdateControlCar(Control_car_input)
             pilote.UpdateDirectionCar(Control_direction_input)
-
+            pilote.GetFourche
             # print(f"Direction actuelle :{pilote.getCurrentDirection()}")
             # print(f"Vitesse actuelle :{pilote.getCurrentSpeed()}")
             # pilote.applyBrakes(True)

@@ -1,14 +1,14 @@
-# Code complet modifié : suppression de namedtuple, ajout de make_point()
-
 import serial
 import threading
+from dataclasses import dataclass
+from typing import List
 
-# Constantes de protocole LD06
+# Constantes
 PACKET_LEN = 47
 NUM_POINTS = 12
-CONFIDENCE_THRESHOLD = 50  # Seuil minimal de confiance
+CONFIDENCE_THRESHOLD = 50
 
-# Table CRC8 complète pour LD06
+# Table CRC
 CRC_TABLE = [
     0x00, 0x4d, 0x9a, 0xd7, 0x79, 0x34, 0xe3, 0xae, 0xf2, 0xbf, 0x68, 0x25, 0x8b, 0xc6, 0x11, 0x5c,
     0xa9, 0xe4, 0x33, 0x7e, 0xd0, 0x9d, 0x4a, 0x07, 0x5b, 0x16, 0xc1, 0x8c, 0x22, 0x6f, 0xb8, 0xf5,
@@ -28,9 +28,16 @@ CRC_TABLE = [
     0xf4, 0xb9, 0x6e, 0x23, 0x8d, 0xc0, 0x17, 0x5a, 0x06, 0x4b, 0x9c, 0xd1, 0x7f, 0x32, 0xe5, 0xa8
 ]
 
-class LidarKit:
-    """Gestion du LIDAR LD06 sans affichage graphique."""
 
+@dataclass
+class LidarPoint:
+    angle: float
+    distance: float
+    confidence: int
+    timestamp: int
+
+
+class LidarKit:
     def __init__(self, port="/dev/ttyS0", baudrate=230400, debug=False):
         self.port = port
         self.baudrate = baudrate
@@ -40,23 +47,39 @@ class LidarKit:
         self.running = False
         self.thread = None
 
-        # Liste de points récents
-        self.points = []
-
-        # Tableau angle→distance (0–359) en mm
+        self.points: List[LidarPoint] = []
         self.angle_distance_map = [-1.0] * 360
-
-        # Verrou pour accès thread-safe
         self.lock = threading.Lock()
 
-    def make_point(self, angle, distance, confidence, timestamp):
-        """Crée une structure de point LIDAR sous forme de dictionnaire."""
-        return {
-            "angle": angle,
-            "distance": distance,
-            "confidence": confidence,
-            "timestamp": timestamp
-        }
+    def _calc_crc(self, data: bytes) -> int:
+        crc = 0
+        for b in data[:46]:
+            crc = CRC_TABLE[(crc ^ b) & 0xFF]
+        return crc
+
+    def _parse_packet(self, raw: bytes) -> List[LidarPoint]:
+        if len(raw) != PACKET_LEN or self._calc_crc(raw) != raw[46]:
+            if self.debug:
+                print("CRC invalide")
+            return []
+
+        points = []
+
+        start_angle = int.from_bytes(raw[4:6], "little") / 100.0
+        end_angle = int.from_bytes(raw[42:44], "little") / 100.0
+        timestamp = int.from_bytes(raw[44:46], "little")
+        step = ((end_angle - start_angle + 360.0) % 360.0) / (NUM_POINTS - 1)
+
+        for i in range(NUM_POINTS):
+            offset = 6 + i * 3
+            dist = int.from_bytes(raw[offset:offset + 2], "little") / 1000.0
+            conf = raw[offset + 2]
+            angle = (start_angle + i * step) % 360.0
+
+            if conf >= CONFIDENCE_THRESHOLD and dist > 0:
+                points.append(LidarPoint(angle, dist, conf, timestamp))
+
+        return points
 
     def open(self):
         self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
@@ -65,18 +88,12 @@ class LidarKit:
         if self.ser and self.ser.is_open:
             self.ser.close()
 
-    def calc_crc8(self, data):
-        crc = 0
-        for b in data[:46]:
-            crc = CRC_TABLE[(crc ^ b) & 0xFF]
-        return crc
-
     def start(self):
         if self.running:
             return False
         self.running = True
         self.open()
-        self.thread = threading.Thread(target=self.read_loop, daemon=True)
+        self.thread = threading.Thread(target=self._read_loop, daemon=True)
         self.thread.start()
         return True
 
@@ -96,6 +113,21 @@ class LidarKit:
         with self.lock:
             return self.angle_distance_map.copy()
 
+    def _read_loop(self):
+        while self.running:
+            header = self.ser.read(1)
+            if not header or header[0] != 0x54:
+                continue
+
+            raw = bytearray([0x54]) + self.ser.read(PACKET_LEN - 1)
+            new_points = self._parse_packet(raw)
+
+            with self.lock:
+                for pt in new_points:
+                    idx = int(pt.angle) % 360
+                    self.angle_distance_map[idx] = pt.distance
+                    self.points.append(pt)
+
     def get_distance_at_angles(self, angles: List[int]) -> List[float]:
         
         #Retourne les distances mesurées pour les angles donnés.
@@ -103,35 +135,3 @@ class LidarKit:
         
         with self.lock:
             return [self.angle_distance_map[a % 360] if 0 <= a < 360 else -1.0 for a in angles]
-
-
-    def read_loop(self):
-        while self.running:
-            first = self.ser.read(1)
-            if not first or first[0] != 0x54:
-                continue
-
-            pkt = bytearray([0x54]) + self.ser.read(PACKET_LEN - 1)
-            if len(pkt) != PACKET_LEN or self.calc_crc8(pkt) != pkt[46]:
-                if self.debug:
-                    print("CRC invalide, ignore")
-                continue
-
-            start_angle = int.from_bytes(pkt[4:6], "little") / 100.0
-            end_angle   = int.from_bytes(pkt[42:44], "little") / 100.0
-            timestamp   = int.from_bytes(pkt[44:46], "little")
-
-            step = ((end_angle - start_angle + 360.0) % 360.0) / (NUM_POINTS - 1)
-
-            with self.lock:
-                for i in range(NUM_POINTS):
-                    j = 6 + 3 * i
-                    dist_m = int.from_bytes(pkt[j:j+2], "little") / 1000.0
-                    conf   = pkt[j+2]
-                    angle  = (start_angle + i * step) % 360.0
-
-                    if conf >= CONFIDENCE_THRESHOLD:
-                        idx = int(angle)
-                        self.angle_distance_map[idx] = dist_m * 1000.0
-                        self.points.append(self.make_point(angle, dist_m, conf, timestamp))
-
