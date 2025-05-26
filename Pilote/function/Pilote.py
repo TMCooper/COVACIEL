@@ -4,6 +4,7 @@ from threading import Thread
 
 Control_car_input = 0
 Control_direction_input = 0
+e_prev = 0
 running = True
 
 #Borche fourche = 35
@@ -173,7 +174,7 @@ class Pilote():
         """Effectue un arret propre des thread ainsi qu'un nettoyage du gpio"""
         # Arrete les threads ainsi que tous se qui est lier au gpio 
         global running ; running = False
-        gpio.cleanup 
+        gpio.cleanup()
         self.dir.stop()
         self.pwm.stop()
         self.vit.join()
@@ -181,3 +182,36 @@ class Pilote():
 
     def GetFourche(self):
         print(gpio.input(self.branch_fourche))
+    
+    def CalcPID(self, input, output):
+        global e_prev
+        t = 20e-3
+        
+        # Calcule P
+        gain = 10 # Kp
+        print(f"Kp : {gain}")
+        e = input - output # Consigne moins sortie
+        print(f"e : {e}")
+        P = gain * e # gain * e (erreur)
+        print(f"P : {P}")
+
+        # Calcule I
+        Ki = 0.4 # Valeur a changer
+        print(f"Ki : {Ki}")
+        I = Ki*e*t
+        print(f"I = {I}")
+        print(f"t = {t}")
+
+        # Calcule D
+        Kd = 0.04 # Gain deriver a ajuster peut être
+        print(f"Kd : {Kd}")
+        deriver = (e - e_prev) / t # t = delta
+        print(f"deriver : {deriver}")
+        D = Kd * deriver
+        print(f"D : {D}")
+        e_prev = e 
+
+        # Calcule PI
+        PID = P + I + D
+
+        return PID
