@@ -189,18 +189,12 @@ class Pilote():
         
         # Calcule P
         gain = 10 # Kp
-        print(f"Kp : {gain}")
         e = input - output # Consigne moins sortie
-        print(f"e : {e}")
         P = gain * e # gain * e (erreur)
-        print(f"P : {P}")
 
         # Calcule I
         Ki = 0.4 # Valeur a changer
-        print(f"Ki : {Ki}")
         I = Ki*e*t
-        print(f"I = {I}")
-        print(f"t = {t}")
 
         # Calcule D
         Kd = 0.04 # Gain deriver a ajuster peut être
