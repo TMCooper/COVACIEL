@@ -9,7 +9,8 @@ LidarPoint = namedtuple("LidarPoint", ["angle", "distance", "confidence", "times
 
 PACKET_LEN = 47
 NUM_POINTS = 12
-CONFIDENCE_THRESHOLD = 50  # Minimum de confiance pour accepter un point
+CONFIDENCE_THRESHOLD = 50
+PWM_GPIO = 12  # GPIO18 / Broche 12  # Minimum de confiance pour accepter un point
 
 CRC_TABLE = [
     0x00, 0x4d, 0x9a, 0xd7, 0x79, 0x34, 0xe3,
@@ -46,6 +47,17 @@ class LidarKit:
         self.thread = None
         self.points = []
         self.lock = threading.Lock()
+        self.pwm_pin = PWM_GPIO
+
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(self.pwm_pin, GPIO.OUT)
+        self.pwm = GPIO.PWM(self.pwm_pin, 1000)  # 1 kHz
+        self.pwm.start(0)
+
+    def _set_pwm_max(self):
+        self.pwm.ChangeDutyCycle(100)
+        if self.debug:
+            print("PWM à 100 %")
 
     def open(self):
         self.ser = serial.Serial(self.port, self.baudrate, timeout=0.1)
