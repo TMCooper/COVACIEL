@@ -13,7 +13,7 @@ def main():
             
             pilote.UpdateControlCar(Control_car_input)
             pilote.UpdateDirectionCar(Control_direction_input)
-            pilote.GetFourche
+            # pilote.GetFourche
             # print(f"Direction actuelle :{pilote.getCurrentDirection()}")
             # print(f"Vitesse actuelle :{pilote.getCurrentSpeed()}")
             # pilote.applyBrakes(True)

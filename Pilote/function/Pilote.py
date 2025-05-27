@@ -5,6 +5,7 @@ from threading import Thread
 Control_car_input = 0
 Control_direction_input = 0
 e_prev = 0
+integral = 0
 running = True
 
 #Borche fourche = 35
@@ -146,7 +147,7 @@ class Pilote():
         
         elif ID == 1:
             direction = self.direction
-            
+
             if direction == 0: 
                 temps_haut_direction = 1.38e-3  # Temps haut de 1.38 ms
             elif direction == 1:
@@ -185,6 +186,7 @@ class Pilote():
     
     def CalcPID(self, input, output):
         global e_prev
+        global integral
         t = 20e-3
         
         # Calcule P
@@ -194,15 +196,16 @@ class Pilote():
 
         # Calcule I
         Ki = 0.4 # Valeur a changer
-        I = Ki*e*t
+        integral += e * t
+        I = Ki * integral
 
         # Calcule D
         Kd = 0.04 # Gain deriver a ajuster peut être
-        print(f"Kd : {Kd}")
+        # print(f"Kd : {Kd}")
         deriver = (e - e_prev) / t # t = delta
-        print(f"deriver : {deriver}")
+        # print(f"deriver : {deriver}")
         D = Kd * deriver
-        print(f"D : {D}")
+        # print(f"D : {D}")
         e_prev = e 
 
         # Calcule PI

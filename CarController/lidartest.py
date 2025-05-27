@@ -3,7 +3,6 @@ import os
 import sys
 import RPi.GPIO as gpio
 import numpy as np
-import cv2
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -13,10 +12,10 @@ from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
 class CarController:
     def __init__(self):
         self.lidar = LidarKit("/dev/ttyS0" , debug=True)
-        self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
+        # self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
         self.lidar.start()
         self.gain = -1.0
-        self.vitesse_avance = 0.13
+        self.vitesse_avance = 0.5
 
     def calculer_erreur_laterale(self, g, d):
         if g <= 0: g = 1
@@ -24,43 +23,36 @@ class CarController:
         erreur = (g - d) / (g + d)  # ou ((G / (G + D)) * 2) - 1
         return erreur
 
-
     def run(self):
-        self.lidar.start()
         try:
             while True:
-                angle_map = self.lidar.get_angle_map()
+                t0 = time.time()
+                distances = self.lidar.get_distance_at_angles([270, 90])
+                g, d = distances
 
-                # Accéder aux distances pour les angles spécifiques
-                g = angle_map[270] if 270 < len(angle_map) else 10000
-                d = angle_map[90] if 90 < len(angle_map) else 10000
-
-                # Assure-toi que les valeurs ne sont pas négatives
                 g = max(g, 0)
                 d = max(d, 0)
 
                 erreur = self.calculer_erreur_laterale(g, d)
-                direction = self.gain * erreur  # K * e
+                direction = self.gain * erreur
 
-                print(f"[LiDAR] G: {g} m | D: {d} m | e: {erreur:.2f} → Dir: {direction:.1f}")
+                print(f"90°: {d:.2f} m | 270°: {g:.2f} m | erreur: {erreur:.3f} | direction: {direction:.3f}")
 
-                # Assure-toi que la direction est ajustée correctement
-                if direction < 0:
-                    # Si la direction est négative, tourne à droite
-                    self.pilot.UpdateDirectionCar(1.0)
-                else:
-                    # Sinon, tourne à gauche
-                    self.pilot.UpdateDirectionCar(-1.0)
+                # --- Désactivé temporairement pour tester la latence LiDAR uniquement ---
+                # if direction < 0:
+                #     self.pilot.UpdateDirectionCar(-1.0)
+                # else: 
+                #     self.pilot.UpdateDirectionCar(1.0)
+                # self.pilot.UpdateControlCar(self.vitesse_avance)
 
-                self.pilot.UpdateControlCar(self.vitesse_avance)
-
-                time.sleep(0.1)  # Réduire le temps de sommeil pour diminuer la latence
+                time.sleep(0.1)  # comme dans ton test sans latence
+                print(f"⏱️ Loop duration: {time.time() - t0:.3f}s")
 
         except KeyboardInterrupt:
             self.stop()
 
     def stop(self):
-        self.pilot.stop()
+        # self.pilot.stop()  # Commenté temporairement
         self.lidar.stop()
         gpio.cleanup()
         print("Contrôleur arrêté.")
