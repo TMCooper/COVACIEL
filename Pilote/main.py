@@ -9,10 +9,12 @@ def main():
         while True:
 
             Control_car_input = input("A quelle vitesse voulez-vous ajuster le moteur (-1.0 / 1.0) : ")
+            id_car = 0
             Control_direction_input = input("Dans quel dirrection voulez vous allez (-1.0 / 1.0) ? : ")
+            id_dir = 1
             
-            pilote.UpdateControlCar(Control_car_input)
-            pilote.UpdateDirectionCar(Control_direction_input)
+            pilote.UpdateCar(id_car, Control_car_input)
+            pilote.UpdateCar(id_dir, Control_direction_input)
             # pilote.GetFourche
             # print(f"Direction actuelle :{pilote.getCurrentDirection()}")
             # print(f"Vitesse actuelle :{pilote.getCurrentSpeed()}")

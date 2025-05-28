@@ -16,7 +16,7 @@ class CarController:
     def __init__(self):
         self.camera = ColorDetector()
         self.lidar = LidarKit("/dev/ttyS0", debug=True)
-        self.pilot = Pilote(0.0, 0.0, 32, 33)
+        self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
         self.lidar.start()
 
     def get_color_status(self):

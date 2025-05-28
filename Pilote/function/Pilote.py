@@ -7,6 +7,8 @@ Control_direction_input = 0
 e_prev = 0
 integral = 0
 running = True
+update_dir = False
+update_moteur = False
 
 #Borche fourche = 35
 
@@ -35,10 +37,10 @@ class Pilote():
         self.branch_direction = branch_direction
         self.branch_fourche = branch_fourche
         self.lock = threading.Lock()
+        self.update_event = threading.Event()
 
         # Création des thread de la class pilotte
-        self.vit = Thread(target=Pilote.adjustSpeed, args=(self,))
-        self.dir_t = Thread(target=Pilote.changeDirection, args=(self,))
+        self.pilote = Thread(target=Pilote.changePilote, args=(self,))
 
         # Définir le mode de numérotation des broches
         gpio.setmode(gpio.BOARD)
@@ -59,47 +61,56 @@ class Pilote():
         self.dir = dir
 
         # Démarage des thread de la class
-        self.vit.start()
-        self.dir_t.start()
+        self.pilote.start()
 
-    def adjustSpeed(self):
-        # Methode lu par le thread qui s'occupe d'ajuster en boucle la vitesses
-        global Control_car_input
-
-        while running:
-            self.speed = Pilote.verificationEntrer(self, Control_car_input) # Ajuste la valeur de la vitesses entre -1.0 et 1.0
-            rapportCyclique = Pilote.calculerRapportCyclique(self, 0) # Génère un rapport cyclique en fonction de self.speed
-            Pilote.genererSignalPWM(self, 0, rapportCyclique) # Envoie le resultat du rapport cyclique a genererSignalPWM pour ajustement
-
-        return
-    
-    def UpdateControlCar(self, new_value):
-        """Méthode Pour effectuer la mise a jour de la vitesse de la voiture entre -1 et 1"""
-        # Methode intermediaire pour ajuster la valeur de control_car_input 
-        global Control_car_input
-    
-        with self.lock:
-            Control_car_input = new_value
-
-    def changeDirection(self):
+    def changePilote(self):
         # Methode lu par le thread qui s'occupe d'ajuster en boucle la direction
-        global Control_direction_input
+        global Control_direction_input ; global update_dir
+        global Control_car_input ; global update_moteur
 
         while running:
-            self.direction = Pilote.verificationEntrer(self, Control_direction_input) # Ajuste de la vitesses pour la tenir entre -1 et 1
-            rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Génère un rapport cyclique en fonction de self.direction
-            Pilote.genererSignalPWM(self, 1, rapportCyclique) # Envoie le resultat du rapport cyclique a genererSinalPWM pour ajustement
-        
+            self.update_event.wait()  # Attente jusqu'à ce qu'une mise à jour soit demandée
+            self.update_event.clear()
+            
+            if update_dir == True:
+                self.direction = Pilote.verificationEntrer(self, Control_direction_input) # Ajuste de la vitesses pour la tenir entre -1 et 1
+                rapportCyclique = Pilote.calculerRapportCyclique(self, 1) # Génère un rapport cyclique en fonction de self.direction
+                Pilote.genererSignalPWM(self, 1, rapportCyclique) # Envoie le resultat du rapport cyclique a genererSinalPWM pour ajustement
+                update_dir = False
+
+            if update_moteur == True:
+                self.speed = Pilote.verificationEntrer(self, Control_car_input) # Ajuste la valeur de la vitesses entre -1.0 et 1.0
+                rapportCyclique = Pilote.calculerRapportCyclique(self, 0) # Génère un rapport cyclique en fonction de self.speed
+                Pilote.genererSignalPWM(self, 0, rapportCyclique) # Envoie le resultat du rapport cyclique a genererSignalPWM pour ajustement
+                update_moteur == False
+            
+            else: 
+                continue
         return
 
-    def UpdateDirectionCar(self, new_value):
-        """Méthode Pour effectuer la mise a jour de la direction de la voiture entre -1, 0 et 1"""
-        # Methode intermediaire pour ajuster la valeur de control_direction_input 
-        global Control_direction_input
+    def UpdateCar(self, ID, new_value):
+        """Méthode Pour effectuer la mise a jour de la direction ou la vitesse moteur de la voiture entre -1, 0 et 1"""
+        """
+        - le moteur (ID = 0)
+        - la direction (ID = 1)
+        """
+        # Methode intermediaire pour ajuster la valeur de control_direction_input et control_car_input
+        global Control_direction_input ; global update_dir
+        global Control_car_input ; global update_moteur
 
-        with self.lock:
-            Control_direction_input = new_value
-    
+        if ID == 1:
+            with self.lock:
+                Control_direction_input = new_value
+            update_dir = True
+        elif ID == 0:
+            with self.lock:
+                Control_car_input = new_value
+            update_moteur = True
+        else:
+            return 1
+        
+        self.update_event.set()  # Réveille le thread
+
     def applyBrakes(self, entrer):
         """
         Méthode permettant d'activer rapidement les freins.
@@ -109,7 +120,7 @@ class Pilote():
         """
         global Control_car_input
         if entrer == True:
-            Control_car_input = 0 # True pour oui le frein est déclancher
+            Control_car_input = 0 # 0 pour oui le frein est déclancher
         else:
             return None
     
@@ -178,8 +189,7 @@ class Pilote():
         gpio.cleanup()
         self.dir.stop()
         self.pwm.stop()
-        self.vit.join()
-        self.dir_t.join()
+        self.pilote.join()
 
     def GetFourche(self):
         print(gpio.input(self.branch_fourche))
