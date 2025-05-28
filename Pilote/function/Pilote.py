@@ -89,8 +89,7 @@ class Pilote():
         return
 
     def UpdateCar(self, ID, new_value):
-        """Méthode Pour effectuer la mise a jour de la direction ou la vitesse moteur de la voiture entre -1, 0 et 1"""
-        """
+        """Méthode Pour effectuer la mise a jour de la direction ou la vitesse moteur de la voiture entre -1, 0 et 1
         - le moteur (ID = 0)
         - la direction (ID = 1)
         """
@@ -121,6 +120,7 @@ class Pilote():
         global Control_car_input
         if entrer == True:
             Control_car_input = 0 # 0 pour oui le frein est déclancher
+            self.update_event.set()  # Réveille le thread
         else:
             return None
     
@@ -187,6 +187,7 @@ class Pilote():
         # Arrete les threads ainsi que tous se qui est lier au gpio 
         global running ; running = False
         gpio.cleanup()
+        self.update_event.set()
         self.dir.stop()
         self.pwm.stop()
         self.pilote.join()
