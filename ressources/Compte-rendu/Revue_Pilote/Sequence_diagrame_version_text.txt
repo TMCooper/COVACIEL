@@ -1,0 +1,50 @@
+title Pilote Control Flow with Threads and GPIO
+
+actor User
+participant Main
+participant Pilote
+participant GPIO
+
+User -> Main: Run main()
+Main -> Pilote: Pilote(0.0, 0.0, 32, 33)
+Pilote -> GPIO: setmode(BOARD)
+Pilote -> GPIO: setup(branch_moteur, OUT)
+Pilote -> GPIO: setup(branch_direction, OUT)
+Pilote -> GPIO: PWM(branch_moteur, 50).start(0)
+Pilote -> GPIO: PWM(branch_direction, 50).start(0)
+Pilote -> Pilote: Start thread vit (adjustSpeed)
+Pilote -> Pilote: Start thread dir_t (changeDirection)
+
+loop While running
+    User -> Main: input(vitesse)
+    Main -> Pilote: UpdateControlCar(value)
+    Pilote -> Pilote: Control_car_input = value
+
+    User -> Main: input(direction)
+    Main -> Pilote: UpdateDirectionCar(value)
+    Pilote -> Pilote: Control_direction_input = value
+end
+
+par Threads Running
+    loop adjustSpeed()
+        Pilote -> Pilote: verificationEntrer(Control_car_input)
+        Pilote -> Pilote: calculerRapportCyclique(0)
+        Pilote -> Pilote: genererSignalPWM(0, rapport)
+        Pilote -> GPIO: pwm.ChangeDutyCycle()
+    end
+
+    loop changeDirection()
+        Pilote -> Pilote: verificationEntrer(Control_direction_input)
+        Pilote -> Pilote: calculerRapportCyclique(1)
+        Pilote -> Pilote: genererSignalPWM(1, rapport)
+        Pilote -> GPIO: dir.ChangeDutyCycle()
+    end
+end
+
+alt On Exception (KeyboardInterrupt, RuntimeError, ValueError)
+    Main -> Pilote: stop()
+    Pilote -> Pilote: running = False
+    Pilote -> GPIO: dir.stop(), pwm.stop()
+    Pilote -> Pilote: join(vit), join(dir_t)
+    Main -> GPIO: cleanup()
+end

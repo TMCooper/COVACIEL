@@ -2,8 +2,8 @@
 
 <div align="left">
   <img align="left" src="https://i.imgur.com/fXYKU5q.png" alt="Logo" height="100">
- </div>
- <div align="right">
+</div>
+<div align="right">
   <img src="./images/TMCooper_moon.gif" alt="Logo" height="100" width="100">
 </div>
 <div align="center">
@@ -85,11 +85,15 @@
   </h1>
 </div>
 
-- [x] Incomplete Quest
-  - [x] Comprendre le cahier des charges
+- [ ] Incomplete Quest
+  - [ ] Création des bases de la class CarControler
+  - [ ] Création des bases de la class Camera
+  - [ ] Création des bases de la class Lidar
  
-- [ ] Completed Quest
-  - [ ] Aucune
+- [x] Completed Quest
+  - [x] Comprendre le cahier des charges
+  - [x] Creation des base de la Classe Pilote
+  - [x] Amélioration du code Pilote capacité d'avancer
 
 > [!WARNING]
 > Vous êtes sur le README.md main.
@@ -219,7 +223,7 @@ cd /setup/extention_auto_installer
 >~~~
 
 <h1 id=lazygit_install_windows>Install git on windows</h1>
-> [!IMPORTANT]
+>[!IMPORTANT]
 > Veiller a bien installer gh sous peine de ne pas pouvoir télécharger le repo
 
 - Open ``CMD`` or ``powershell``
