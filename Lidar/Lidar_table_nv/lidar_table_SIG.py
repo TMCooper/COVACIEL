@@ -86,7 +86,6 @@ class LidarKit:
             self.thread.join()
         self.close()
         self.pwm.stop()
-        GPIO.cleanup()
 
     def get_angle_map(self):
         with self.lock:

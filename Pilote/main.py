@@ -22,7 +22,7 @@ def main():
 
     except KeyboardInterrupt or RuntimeError or ValueError:
         pilote.stop()
-        gpio.cleanup()  # Nettoyer les GPIO
+        # gpio.cleanup()  # Nettoyer les GPIO
         print("\nArret du programme...\n")
 
 if __name__ == '__main__':

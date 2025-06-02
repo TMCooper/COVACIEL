@@ -3,142 +3,90 @@ import os
 import sys
 import RPi.GPIO as gpio
 import numpy as np
-import cv2
 
-
-# Ajoute le chemin parent au sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from Camera.test_capture_color import ColorDetector
 from Pilote.function.Pilote import Pilote
-from Lidar.Lidar_table_nv.lidar import LidarKit
-
+from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
 
 class CarController:
     def __init__(self):
-        self.camera = ColorDetector()
         self.lidar = LidarKit("/dev/ttyS0", debug=True)
-        self.pilot = Pilote(0.0, 0.0, 32, 33)
+        self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
         self.lidar.start()
+        self.gain = -1.0
+        self.seuil_obstacle = 0.55
+        self.seuil_urgence = 0.2
+        self.vitesse_avance = 0.05
+        self.history = []  # Historique pour la moyenne mobile
 
-    def get_color_status(self):
-        """Analyse les couleurs détectées et retourne un état"""
-        frame = self.camera.picam2.capture_array()
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        red_left_pct, green_right_pct, _ = self.camera.process_frame(frame)
+    def calculer_erreur_laterale(self, g, d):
+        """Calcule l'erreur latérale en fonction des distances gauche et droite."""
+        if g <= 0: g = 1
+        if d <= 0: d = 1
+        erreur = (g - d) / (g + d)
+        return erreur
 
-        left_color = "red" if red_left_pct > 2 else "none"
-        right_color = "green" if green_right_pct > 2 else "none"
+    def moyenne_mobile(self, valeur):
+        """Calcule la moyenne mobile pour lisser les données."""
+        self.history.append(valeur)
+        if len(self.history) > 5:  # Utilise les 5 dernières valeurs
+            self.history.pop(0)
+        return np.mean(self.history)
 
-        # Si les couleurs sont inversées (rouge à droite et vert à gauche), retourne "incorrect"
-        if left_color == "green" and right_color == "red":
-            return "incorrect"
-        elif left_color == "red" or right_color == "green":
-            return "correct"
-        else:
-            return "incorrect"
-
-    def check_obstacles(self):
-        """Analyse les données du LiDAR et retourne l'état de la trajectoire"""
-        points = self.lidar.get_points()
-        if not points:
-            return None
-
-        # Filtrer les points pour les angles spécifiques de 60°, 90°, 270°, et 300°
-        right_60 = next((p.distance for p in points if 55 <= p.angle <= 65), 0)  # Point à 60°
-        right_90 = next((p.distance for p in points if 85 <= p.angle <= 95), 0)  # Point à 90°
-        left_270 = next((p.distance for p in points if 265 <= p.angle <= 275), 0)  # Point à 270°
-        left_300 = next((p.distance for p in points if 295 <= p.angle <= 305), 0)  # Point à 300°
-        min_front = min(p.distance for p in points if p.angle <= 5 or p.angle >= 355) if any(p.angle <= 5 or p.angle >= 355 for p in points) else 999
-
-        return min_front, right_60, right_90, left_270, left_300
-
-
-    def turn_around(self):
-        """Effectue un demi-tour si la détection couleur est mauvaise"""
-        print("Mauvaise couleur détectée. Demi-tour...")
-        self.pilot.UpdateControlCar(-1.0)
-        time.sleep(0.8)
-        self.pilot.UpdateDirectionCar(-1.0)
-        time.sleep(1.2)
-        self.pilot.UpdateControlCar(0.0)
-        self.pilot.UpdateDirectionCar(0.0)
-
-    def avoid_obstacle(self, direction):
-        """Évite un obstacle en changeant de direction momentanément"""
-        print(f"Obstacle détecté. Évitement vers {direction}.")
-        self.pilot.UpdateControlCar(0.1)
-        if direction == "left":
-            self.pilot.UpdateDirectionCar(-1.0)
-        else:
-            self.pilot.UpdateDirectionCar(1.0)
-        time.sleep(0.6)
-        self.pilot.UpdateDirectionCar(0.0)
-        time.sleep(0.5)
-
-    def drive(self):
+    def run(self):
+        """Boucle principale pour contrôler la voiture."""
+        self.lidar.start()
         try:
             while True:
-                color_status = self.get_color_status()
-                check = self.check_obstacles()
-                if check is None:
-                    print("Aucune donnée LIDAR")
-                    self.pilot.UpdateControlCar(0.0)
-                    time.sleep(0.1)
-                    continue
+                angle_map = self.lidar.get_angle_map()
 
-                min_front, right_60, right_90, left_270, left_300 = check
+                # Accéder aux distances pour les angles spécifiques
+                g = angle_map[270] if 270 < len(angle_map) else 10000
+                d = angle_map[90] if 90 < len(angle_map) else 10000
+                front = angle_map[0] if 0 < len(angle_map) else 10000
+                g_320 = angle_map[320] if 320 < len(angle_map) else 10000
+                d_40 = angle_map[40] if 40 < len(angle_map) else 10000
 
-                print(f"[DEBUG] Front min: {min_front:.1f} mm | Right 60°: {right_60:.1f} mm | Right 90°: {right_90:.1f} mm | Left 270°: {left_270:.1f} mm | Left 300°: {left_300:.1f} mm")
+                # Assure-toi que les valeurs ne sont pas négatives
+                g = max(g, 0)
+                d = max(d, 0)
+                front = max(front, 0)
+                g_320 = max(g_320, 0)
+                d_40 = max(d_40, 0)
 
-                # 1. SÉCURITÉ : obstacle trop proche devant (< 10 cm)
-                if min_front < 0.20:
-                    print("⚠️ Obstacle critique très proche ! Recul en urgence.")
-                    self.pilot.UpdateControlCar(-1.0)
-                    time.sleep(0.4)
-                    self.pilot.UpdateControlCar(0.0)
-                    continue
+                # Calcul de l'erreur latérale en utilisant les angles supplémentaires
+                erreur = self.calculer_erreur_laterale(g + g_320, d + d_40)
+                direction = self.moyenne_mobile(self.gain * erreur)  # Utilise la moyenne mobile
 
-                # 2. PRIORITÉ : virages couleur
-                if color_status == "incorrect":
-                    self.turn_around()
-                    continue
-
-                # 3. OBSTACLE (mais pas en virage couleur)
-                if min_front < 0.35:
-                    print(f"🚧 Obstacle devant à {min_front:.1f} mm")
-                    if (left_270 + left_300) > (right_60 + right_90):
-                        self.avoid_obstacle("left")
+                # Détection d'obstacle devant à 0°
+                if front < self.seuil_obstacle:
+                    if (g + g_320) < (d + d_40):
+                        self.pilot.UpdateCar(1, -1)  # Tourne à droite
                     else:
-                        self.avoid_obstacle("right")
-                    continue
+                        self.pilot.UpdateCar(1, 1)  # Tourne à gauche
+                else:
+                    if direction < -0.1:
+                        self.pilot.UpdateCar(1, -1)  # Tourne à droite
+                    elif direction > 0.1:
+                        self.pilot.UpdateCar(1, 1)  # Tourne à gauche
+                    else:
+                        self.pilot.UpdateCar(1, 0)  # Tout droit
 
-                elif (right_60 + right_90) < 35:
-                    self.avoid_obstacle("left")
-                    continue
-                elif (left_270 + left_300) < 35:
-                    self.avoid_obstacle("right")
-                    continue
-
-                # 4. TOUT EST OK
-                elif color_status == "correct":
-                    self.pilot.UpdateControlCar(0.01)
-                    self.pilot.UpdateDirectionCar(0.0)
+                self.pilot.UpdateCar(0, self.vitesse_avance)
 
                 time.sleep(0.1)
 
         except KeyboardInterrupt:
             self.stop()
 
-
     def stop(self):
-        """Arrête le contrôleur et nettoie les ressources"""
+        """Arrête la voiture et nettoie les ressources."""
         self.pilot.stop()
         self.lidar.stop()
-        self.camera.picam2.stop()
-        gpio.cleanup()  # Nettoyer les GPIO
+        gpio.cleanup()
         print("Contrôleur arrêté.")
 
 if __name__ == "__main__":
     car = CarController()
-    car.drive()
+    car.run()

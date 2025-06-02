@@ -1,78 +1,84 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from Pilote.function.Pilote import Pilote
-from Lidar.Lidar_table_nv.lidar_SIG import LidarKit
-
 import time
+import os
+import sys
 import RPi.GPIO as gpio
 import numpy as np
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from Pilote.function.Pilote import Pilote
+from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
 
 class CarController:
     def __init__(self):
-        self.pilote = Pilote(motor_pin=32, servo_pin=33)
-        self.lidar = LidarKit(port="/dev/ttyS0", baudrate=230400, debug=False)
+        self.lidar = LidarKit("/dev/ttyS0", debug=True)
+        self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
         self.lidar.start()
+        self.gain = -1.0
+        self.seuil_obstacle = 0.8
+        self.seuil_urgence = 0.35
+        self.vitesse_avance = 0.05
 
-    def check_distances(self):
-        """Lit les distances à gauche (90°), droite (270°) et face (0°)"""
-        angle_map = self.lidar.get_angle_map()
-
-        def valid_cm(angle):
-            mm = angle_map[angle]
-            return mm / 10 if 20 < mm < 2000 else 999.0  # En cm, valeurs aberrantes ignorées
-
-        left = valid_cm(90)
-        right = valid_cm(270)
-        front = valid_cm(0)
-
-        return left, right, front
+    def calculer_erreur_laterale(self, g, d):
+        """Calcule l'erreur latérale en fonction des distances gauche et droite."""
+        if g <= 0: g = 1
+        if d <= 0: d = 1
+        erreur = (g - d) / (g + d)
+        return erreur
 
     def run(self):
+        """Boucle principale pour contrôler la voiture."""
+        self.lidar.start()
         try:
             while True:
-                left, right, front = self.check_distances()
-                print(f"[LIDAR] Left: {left:.1f} cm | Right: {right:.1f} cm | Front: {front:.1f} cm")
+                angle_map = self.lidar.get_angle_map()
 
-                if front < 25:
-                    print("🛑 Obstacle en face → arrêt immédiat")
-                    self.pilote.adjustSpeed(0.0)
-                    self.pilote.changeDirection(0.0)
+                # Accéder aux distances pour les angles spécifiques
+                g = angle_map[270] if 270 < len(angle_map) else 10000
+                d = angle_map[90] if 90 < len(angle_map) else 10000
+                front = angle_map[0] if 0 < len(angle_map) else 10000  # Distance devant la voiture à 0°
+                g_320 = angle_map[320] if 320 < len(angle_map) else 10000  # Distance à 320°
+                d_40 = angle_map[40] if 40 < len(angle_map) else 10000  # Distance à 40°
 
-                elif right < 30:
-                    print("➡️ Obstacle à droite → tourner à gauche")
-                    self.pilote.changeDirection(-0.5)
-                    self.pilote.adjustSpeed(0.3)
+                # Assure-toi que les valeurs ne sont pas négatives
+                g = max(g, 0)
+                d = max(d, 0)
+                front = max(front, 0)
+                g_320 = max(g_320, 0)
+                d_40 = max(d_40, 0)
 
-                elif left < 30:
-                    print("⬅️ Obstacle à gauche → tourner à droite")
-                    self.pilote.changeDirection(0.5)
-                    self.pilote.adjustSpeed(0.3)
+                # Calcul de l'erreur latérale en utilisant les angles supplémentaires
+                erreur = self.calculer_erreur_laterale(g + g_320, d + d_40)
+                direction = self.gain * erreur  # K * e
 
+                # Détection d'obstacle devant à 0°
+                if front < self.seuil_obstacle:  # Seuil de distance pour détecter un obstacle devant
+                    if (g + g_320) < (d + d_40):
+                        # Si l'obstacle est plus proche à gauche, tourne à droite
+                        self.pilot.UpdateCar(1, -1)
+                    else:
+                        # Sinon, tourne à gauche
+                        self.pilot.UpdateCar(1, 1)
                 else:
-                    print("✅ Route libre → avancer tout droit")
-                    self.pilote.changeDirection(0.0)
-                    self.pilote.adjustSpeed(0.5)
+                    # Sinon, ajuste la direction en fonction de l'erreur latérale
+                    if direction < 0:
+                        self.pilot.UpdateCar(1, -1)
+                    else:
+                        self.pilot.UpdateCar(1, 1)
 
-                time.sleep(0.1)
+                self.pilot.UpdateCar(0, self.vitesse_avance)  # Vitesse constante
+
+                time.sleep(0.1)  # Réduire le temps de sommeil pour diminuer la latence
 
         except KeyboardInterrupt:
-            print("Arrêt manuel du programme.")
-        finally:
-            self.lidar.stop()
-            self.pilote.adjustSpeed(0)
-            print("Système arrêté proprement.")
-
+            self.stop()
 
     def stop(self):
-        self.pilot.stop()
+        """Arrête la voiture et nettoie les ressources."""
         self.lidar.stop()
-        gpio.cleanup()
-        print("🛑 Contrôleur arrêté proprement.")
-
+        self.pilot.stop()
+        print("Contrôleur arrêté.")
 
 if __name__ == "__main__":
     car = CarController()
-    car.drive()
+    car.run()

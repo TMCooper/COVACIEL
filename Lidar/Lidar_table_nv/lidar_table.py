@@ -1,6 +1,7 @@
 import serial
 import threading
 import numpy as np
+import RPi.GPIO as GPIO
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from collections import namedtuple
