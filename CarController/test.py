@@ -14,7 +14,6 @@ class CarController:
         self.lidar = LidarKit("/dev/ttyS0", debug=True)
         self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
         self.lidar.start()
-        time.sleep(2)
         self.gain = -1.0
         self.seuil_obstacle = 0.55
         self.seuil_urgence = 0.2
@@ -38,7 +37,6 @@ class CarController:
     def run(self):
         """Boucle principale pour contrôler la voiture."""
         self.lidar.start()
-        time.sleep(2)
         try:
             while True:
                 angle_map = self.lidar.get_angle_map()

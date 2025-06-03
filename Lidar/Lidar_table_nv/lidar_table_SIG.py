@@ -3,13 +3,13 @@ import threading
 import RPi.GPIO as GPIO
 import time
 
-# Constantes
-PACKET_LEN = 47
-NUM_POINTS = 12
-CONFIDENCE_THRESHOLD = 50
+# Constantes pour le décodage des trames et contrôle
+PACKET_LEN = 47          # Longueur d'une trame de données Lidar
+NUM_POINTS = 12          # Nombre de points de distance par trame
+CONFIDENCE_THRESHOLD = 50  # Seuil de confiance minimum pour une mesure valide
 PWM_GPIO = 12  # GPIO18 / Broche 12
 
-# Table CRC8 pour LD06
+# Table CRC8 pour vérifier l'intégrité des trames
 CRC_TABLE = [
     0x00, 0x4d, 0x9a, 0xd7, 0x79, 0x34, 0xe3, 0xae, 0xf2, 0xbf, 0x68, 0x25,
     0x8b, 0xc6, 0x11, 0x5c, 0xa9, 0xe4, 0x33, 0x7e, 0xd0, 0x9d, 0x4a, 0x07,
@@ -40,56 +40,59 @@ class LidarKit:
         self.port = port
         self.baudrate = baudrate
         self.debug = debug
-        self.ser = None
-        self.running = False
-        self.thread = None
-        self.angle_distance_map = [-1.0] * 360
-        self.lock = threading.Lock()
-        self.pwm_pin = PWM_GPIO
+        self.ser = None             # Port série
+        self.running = False        # État du thread de lecture
+        self.thread = None          # Thread de lecture des données
+        self.angle_distance_map = [-1.0] * 360  # Tableau des distances indexées par angle (0 à 359)
+        self.lock = threading.Lock()           # Verrou pour accès concurrent
+        self.pwm_pin = PWM_GPIO                # Broche PWM
 
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(self.pwm_pin, GPIO.OUT)
         self.pwm = GPIO.PWM(self.pwm_pin, 1000)  # 1 kHz
-        self.pwm.start(0)
+        self.pwm.start(0)                        # PWM à 0% au départ
 
     def _set_pwm_max(self):
-        self.pwm.ChangeDutyCycle(100)
+        self.pwm.ChangeDutyCycle(100)   # Met le moteur du lidar à pleine puissance
         if self.debug:
             print("PWM à 100 %")
 
     def _calc_crc(self, data):
         crc = 0
-        for b in data[:46]:
+        for b in data[:46]:                   # CRC calculé sur les 46 premiers octets
             crc = CRC_TABLE[(crc ^ b) & 0xFF]
         return crc
 
     def open(self):
-        self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)
+        self.ser = serial.Serial(self.port, self.baudrate, timeout=0.01)   # Ouverture du port série
+
 
     def close(self):
         if self.ser and self.ser.is_open:
-            self.ser.close()
+            self.ser.close()               # Fermeture propre du port série
 
     def start(self):
         if self.running:
             return False
         self.running = True
-        self.open()
-        self._set_pwm_max()
-        self.thread = threading.Thread(target=self._read_loop, daemon=True)
+        self.open()                        # Active la liaison série
+        self._set_pwm_max()                # Lance le moteur lidar
+        self.thread = threading.Thread(target=self._read_loop, daemon=True)   # Lancement du thread de lecture
         self.thread.start()
         return True
 
     def stop(self):
         self.running = False
         if self.thread:
-            self.thread.join()
+            self.thread.join()      # Attend la fin du thread
         self.close()
-        self.pwm.stop()
+        self.pwm.stop()             # Coupe le signal PWM (arrêt moteur)
+
 
     def get_angle_map(self):
         with self.lock:
-            return self.angle_distance_map.copy()
+            return self.angle_distance_map.copy()    # Retourne une copie des distances par angle
+
 
     def get_distance_at_angles(self, angles):
         with self.lock:
@@ -97,17 +100,17 @@ class LidarKit:
 
     def _read_loop(self):
         while self.running:
-            header = self.ser.read(1)
+            header = self.ser.read(1)    # Lecture d'un octet
             if not header or header[0] != 0x54:
-                continue
-            raw = bytearray(header + self.ser.read(PACKET_LEN - 1))
+                continue                 # Attend un octet de début valide
+            raw = bytearray(header + self.ser.read(PACKET_LEN - 1))       # Lit le reste de la trame
             if len(raw) != PACKET_LEN or self._calc_crc(raw) != raw[46]:
-                continue
-
+                continue                 # Vérifie longueur et validité CRC
+             # Calcul des angles de début et de fin de trame
             start_angle = int.from_bytes(raw[4:6], "little") / 100.0
             end_angle = int.from_bytes(raw[42:44], "little") / 100.0
             step = ((end_angle - start_angle + 360.0) % 360.0) / (NUM_POINTS - 1)
-
+            # Extraction des 12 mesures dans la trame
             for i in range(NUM_POINTS):
                 offset = 6 + i * 3
                 dist = int.from_bytes(raw[offset:offset+2], "little") / 1000.0
