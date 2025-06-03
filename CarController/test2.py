@@ -20,7 +20,7 @@ class CarController:
         self.gain = -1.0
         self.seuil_obstacle = 0.35
         self.seuil_urgence = 0.2
-        self.vitesse_avance = 0.1
+        self.vitesse_avance = 0.05
         self.history = []
 
     def calculer_erreur_laterale(self, g, d):

@@ -50,6 +50,9 @@ class Pilote():
         gpio.setup(self.branch_direction, gpio.OUT) #Configuration de la branche dirrection en sortie
         gpio.setup(self.branch_fourche, gpio.IN, pull_up_down=gpio.PUD_UP) #Configuration de la branch fourche en entré
 
+        # Création d'un evenement de récuperation des informations emise par la fourche
+        # gpio.add_event_detect(self.branch_fourche, gpio.BOTH, self.GetFourche)
+        
         # Initialisation de la broche moteur
         pwm = gpio.PWM(self.branch_moteur, 50)  # Fréquence de 50 Hz sur la branch moteur
         pwm.start(0)
@@ -186,17 +189,21 @@ class Pilote():
         """Effectue un arret propre des thread ainsi qu'un nettoyage du gpio"""
         # Arrete les threads ainsi que tous se qui est lier au gpio 
         global running ; running = False
-        gpio.cleanup()
         self.update_event.set()
         self.dir.stop()
         self.pwm.stop()
         self.pilote.join()
+        gpio.cleanup()
 
-    def GetFourche(self):
+    def GetFourche(self, channel):
         # TODO
         # Une fois les different calcule fait lors du get fourche alors ajuster la valeur de self.speed pour rendre la vitesse
         # reel accéssible par getCurentspeed()
-        print(gpio.input(self.branch_fourche))
+        consigne = gpio.input(self.branch_fourche)
+        if consigne:
+            print(consigne)
+        else:
+            print('0')
     
     def CalcPID(self, input, output):
         global e_prev

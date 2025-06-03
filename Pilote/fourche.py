@@ -1,25 +1,32 @@
 import RPi.GPIO as GPIO
+import time
 
-# GPIO 19 correspond à la broche physique 35
-broche_fourche = 35
+broche_fourche = 35  # Broche physique (BOARD) = GPIO19
 
-# Configuration de la broche en mode entrée avec résistance de tirage interne activée
-
-def etat_callback():
-    print("Changement détecté, état actuel :", GPIO.input(broche_fourche))  # 1 ou 0 selon si le capteur détecte quelque chose
+def etat_callback(channel):
+    print("Changement détecté, état actuel :", GPIO.input(broche_fourche))
 
 def main():
-        try:
-            GPIO.add_event_callback(broche_fourche, GPIO.BOTH, callback=etat_callback)
+    print("Initialisation...")
+    GPIO.setmode(GPIO.BOARD)
 
-        except KeyboardInterrupt:
-            print("Arrêt du programme")
+    try:
+        GPIO.setup(broche_fourche, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-        finally:
-            GPIO.cleanup()  # Libère les broches GPIO
+        # Important : ne pas appeler add_event_detect plusieurs fois sur la même broche
+        GPIO.add_event_detect(broche_fourche, GPIO.BOTH, callback=etat_callback, bouncetime=200)
+
+        print("Détection d'événements activée. Appuyez sur Ctrl+C pour quitter.")
+        while True:
+            time.sleep(0.1)
+
+    except RuntimeError as e:
+        print("Erreur d'initialisation GPIO :", e)
+    except KeyboardInterrupt:
+        print("\nArrêt du programme par l'utilisateur.")
+    finally:
+        GPIO.cleanup()
+        print("Nettoyage GPIO terminé.")
 
 if __name__ == '__main__':
-    # Utilise la numérotation BOARD
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(broche_fourche, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-     
+    main()
