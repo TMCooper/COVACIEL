@@ -3,88 +3,114 @@ import os
 import sys
 import RPi.GPIO as gpio
 import numpy as np
+import cv2
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from Pilote.function.Pilote import Pilote
-from Lidar.Lidar_table_nv.lidar import LidarKit
+from Lidar.Lidar_table_nv.lidar_table_SIG import LidarKit
+from Camera.test_capture_color import ColorDetector
 
-class LidarOnlyNavigator:
+class CarController:
     def __init__(self):
         self.lidar = LidarKit("/dev/ttyS0", debug=True)
-        self.pilot = Pilote(0.0, 0.0, 32, 33)
+        self.pilot = Pilote(0.0, 0.0, 32, 33, 35)
+        self.color_detector = ColorDetector()
         self.lidar.start()
+        self.gain = -1.0
+        self.seuil_obstacle = 0.35
+        self.seuil_urgence = 0.2
+        self.vitesse_avance = 0.1
+        self.history = []
 
-    def get_lidar_readings(self):
-        """Retourne la distance moyenne à 0°, 90° et 270°"""
-        points = self.lidar.get_points()
-        if not points:
-            return None
+    def calculer_erreur_laterale(self, g, d):
+        """Calcule l'erreur latérale en fonction des distances gauche et droite."""
+        if g <= 0: g = 1
+        if d <= 0: d = 1
+        erreur = (g - d) / (g + d)
+        return erreur
 
-        get_avg = lambda a_min, a_max: np.mean([
-            p.distance for p in points 
-            if a_min <= p.angle <= a_max and p.distance < 300
-        ]) if any(a_min <= p.angle <= a_max for p in points) else 999
+    def moyenne_mobile(self, valeur):
+        """Calcule la moyenne mobile pour lisser les données."""
+        self.history.append(valeur)
+        if len(self.history) > 5:
+            self.history.pop(0)
+        return np.mean(self.history)
 
-        front = get_avg(355, 360) + get_avg(0, 5)
-        front /= 2
-        left = get_avg(85, 95)
-        right = get_avg(265, 275)
+    def get_color_status(self):
+        """Analyse les couleurs détectées et retourne un état."""
+        frame = self.color_detector.picam2.capture_array()
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        red_left_pct, green_right_pct, _ = self.color_detector.process_frame(frame)
 
-        return front, left, right
+        left_color = "red" if red_left_pct > 5 else "none"
+        right_color = "green" if green_right_pct > 5 else "none"
 
-    def back_and_turn(self):
-        print("⚠️ Blocage total détecté. Recul et rotation.")
-        self.pilot.UpdateControlCar(-1.0)
-        time.sleep(0.6)
-        self.pilot.UpdateDirectionCar(1.0)
-        self.pilot.UpdateControlCar(0.2)
-        time.sleep(0.8)
-        self.pilot.UpdateControlCar(0.0)
-        self.pilot.UpdateDirectionCar(0.0)
+        if left_color == "red" and right_color == "green":
+            return "correct"
+        elif left_color == "red" or right_color == "green":
+            return "single_color"
+        else:
+            return "incorrect"
 
-    def drive(self):
+    def run(self):
+        """Boucle principale pour contrôler la voiture."""
+        self.lidar.start()
         try:
             while True:
-                lidar_data = self.get_lidar_readings()
-                if lidar_data is None:
-                    print("❌ Aucune donnée LiDAR.")
-                    self.pilot.UpdateControlCar(0.0)
-                    time.sleep(0.1)
+                angle_map = self.lidar.get_angle_map()
+
+                # Accéder aux distances pour les angles spécifiques
+                g = angle_map[270] if 270 < len(angle_map) else 10000
+                d = angle_map[90] if 90 < len(angle_map) else 10000
+                front = angle_map[0] if 0 < len(angle_map) else 10000
+                g_320 = angle_map[320] if 320 < len(angle_map) else 10000
+                d_40 = angle_map[40] if 40 < len(angle_map) else 10000
+
+                # Assure-toi que les valeurs ne sont pas négatives
+                g = max(g, 0)
+                d = max(d, 0)
+                front = max(front, 0)
+                g_320 = max(g_320, 0)
+                d_40 = max(d_40, 0)
+
+                # Calcul de l'erreur latérale en utilisant les angles supplémentaires
+                erreur = self.calculer_erreur_laterale(g + g_320, d + d_40)
+                direction = self.moyenne_mobile(self.gain * erreur)
+
+                # Vérification de l'état des couleurs
+                color_status = self.get_color_status()
+                if color_status == "incorrect":
+                    self.pilot.UpdateCar(0, -1)
+                    time.sleep(2)
                     continue
 
-                front, left, right = lidar_data
-                print(f"[LIDAR] Front: {front:.1f} cm | Left: {left:.1f} cm | Right: {right:.1f} cm")
-
-                if front < 0.50:
-                    if left > right and left > 10:
-                        print("🔁 Obstacle devant → Évitement à gauche")
-                        self.pilot.UpdateControlCar(0.13)
-                        self.pilot.UpdateDirectionCar(-1.0)
-                    elif right >= left and right > 10:
-                        print("🔁 Obstacle devant → Évitement à droite")
-                        self.pilot.UpdateControlCar(0.13)
-                        self.pilot.UpdateDirectionCar(1.0)
+                # Détection d'obstacle devant à 0°
+                if front < self.seuil_obstacle:
+                    if (g + g_320) < (d + d_40):
+                        self.pilot.UpdateCar(1, -1)
                     else:
-                        self.back_and_turn()
-                    time.sleep(0.5)
-                    self.pilot.UpdateDirectionCar(0.0)
+                        self.pilot.UpdateCar(1, 1)
                 else:
-                    print("✅ Route libre → Avancer")
-                    self.pilot.UpdateControlCar(0.13)
-                    self.pilot.UpdateDirectionCar(0.0)
+                    if direction < -0.1:
+                        self.pilot.UpdateCar(1, -1)
+                    elif direction > 0.1:
+                        self.pilot.UpdateCar(1, 1)
+                    else:
+                        self.pilot.UpdateCar(1, 0)
 
+                self.pilot.UpdateCar(0, self.vitesse_avance)
                 time.sleep(0.1)
 
         except KeyboardInterrupt:
             self.stop()
 
     def stop(self):
-        self.pilot.stop()
+        """Arrête la voiture et nettoie les ressources."""
         self.lidar.stop()
-        gpio.cleanup()
-        print("Arrêt du système.")
+        self.pilot.stop()
+        print("Contrôleur arrêté.")
 
 if __name__ == "__main__":
-    bot = LidarOnlyNavigator()
-    bot.drive()
+    car = CarController()
+    car.run()

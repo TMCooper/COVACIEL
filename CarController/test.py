@@ -17,7 +17,7 @@ class CarController:
         self.gain = -1.0
         self.seuil_obstacle = 0.55
         self.seuil_urgence = 0.2
-        self.vitesse_avance = 0.05
+        self.vitesse_avance = 0.15
         self.history = []  # Historique pour la moyenne mobile
 
     def calculer_erreur_laterale(self, g, d):
@@ -82,9 +82,8 @@ class CarController:
 
     def stop(self):
         """Arrête la voiture et nettoie les ressources."""
-        self.pilot.stop()
         self.lidar.stop()
-        gpio.cleanup()
+        self.pilot.stop()
         print("Contrôleur arrêté.")
 
 if __name__ == "__main__":
