@@ -193,6 +193,9 @@ class Pilote():
         self.pilote.join()
 
     def GetFourche(self):
+        # TODO
+        # Une fois les different calcule fait lors du get fourche alors ajuster la valeur de self.speed pour rendre la vitesse
+        # reel accéssible par getCurentspeed()
         print(gpio.input(self.branch_fourche))
     
     def CalcPID(self, input, output):
