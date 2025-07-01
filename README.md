@@ -86,11 +86,13 @@
 </div>
 
 - [ ] Incomplete Quest
-  - [ ] Création des bases de la class CarControler
-  - [ ] Création des bases de la class Camera
-  - [ ] Création des bases de la class Lidar
- 
+  - [ ] PID (Asservissement moteur)
+
 - [x] Completed Quest
+  - [x] Podium de la course 3 ème
+  - [x] Création des bases de la class CarControler
+  - [x] Création des bases de la class Camera
+  - [x] Création des bases de la class Lidar
   - [x] Comprendre le cahier des charges
   - [x] Creation des base de la Classe Pilote
   - [x] Amélioration du code Pilote capacité d'avancer
