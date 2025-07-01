@@ -52,10 +52,8 @@ class LidarKit:
         self.pwm = GPIO.PWM(self.pwm_pin, 1000)  # 1 kHz
         self.pwm.start(0)                        # PWM à 0% au départ
 
-    def _set_pwm_max(self):
-        self.pwm.ChangeDutyCycle(100)   # Met le moteur du lidar à pleine puissance
-        if self.debug:
-            print("PWM à 100 %")
+        # Liste de points récents 
+        self.points = []
 
     def _calc_crc(self, data):
         crc = 0
