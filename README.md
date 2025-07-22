@@ -225,6 +225,7 @@ cd /setup/extention_auto_installer
 >~~~
 
 <h1 id=lazygit_install_windows>Install git on windows</h1>
+
 >[!IMPORTANT]
 > Veiller a bien installer gh sous peine de ne pas pouvoir télécharger le repo
 
