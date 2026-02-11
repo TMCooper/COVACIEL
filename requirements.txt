@@ -12,7 +12,7 @@ dash-html-components==2.0.0
 dash-table==5.0.0
 fastjsonschema==2.21.1
 Flask==3.0.3
-fonttools==4.56.0
+fonttools==4.60.2
 idna==3.10
 importlib_metadata==8.6.1
 itsdangerous==2.2.0
